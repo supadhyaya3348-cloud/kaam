@@ -1,0 +1,10 @@
+{
+  "name": "kaam",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kaam: hiring on proven skills, with Base Camp, Ridge and Summit tiers. Frontend + Vercel serverless API on Neon Postgres.",
+  "scripts": { "dev": "vercel dev" },
+  "dependencies": { "@neondatabase/serverless": "^0.10.4" },
+  "engines": { "node": ">=18" }
+}
