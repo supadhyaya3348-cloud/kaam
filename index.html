@@ -195,6 +195,15 @@ body.exam header.top{display:none}
 table.fair{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 table.fair th,table.fair td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .scroll{overflow-x:auto}
+.celebrate{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(14,32,60,.45);animation:celIn .2s ease-out}
+.celebrate canvas{position:fixed;inset:0;pointer-events:none}
+.cel-card{position:relative;max-width:460px;width:100%;text-align:center;gap:12px;padding:28px 24px;animation:celPop .35s cubic-bezier(.2,1.4,.4,1)}
+.cel-badge{font-size:48px;line-height:1}
+.cel-next{list-style:none;counter-reset:n;padding:0;margin:4px 0;text-align:left;display:flex;flex-direction:column;gap:8px}
+.cel-next li{counter-increment:n;display:grid;grid-template-columns:28px 1fr;gap:2px 10px;background:var(--panel2);border-radius:10px;padding:10px 12px}
+.cel-next li::before{content:counter(n);grid-row:span 2;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#fff;font-weight:800;display:grid;place-items:center;font-size:13px}
+@keyframes celIn{from{opacity:0}}@keyframes celPop{from{transform:scale(.85);opacity:0}}
+@media (prefers-reduced-motion:reduce){.celebrate,.cel-card{animation:none}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--ink);padding:10px 16px;border-radius:10px;font-weight:800;z-index:20;max-width:calc(100% - 32px)}
 .empty{border:1.5px dashed var(--line2);border-radius:12px;padding:18px;color:var(--mute);font-family:var(--f-hand);font-size:17px;background:rgba(255,255,255,.5)}
 .kv{font-variant-numeric:tabular-nums}
@@ -651,6 +660,13 @@ function profileForm(role, p) {
       <div class="row"><button class="btn" type="submit">${role === 'employer' ? 'Save company' : 'Continue'}</button></div>
     </form>`;
 }
+// The roadmap's last step: apply (or submit, if already applied) for the target job.
+function applyRoadBtn(jobId) {
+  const app = Object.values(S.apps).find(x => x.uid === S.uid && x.jobId === jobId);
+  if (app && (app.ready || app.status !== 'applied')) return `<span class="row" style="gap:8px"><span class="tag base">Applied · ${esc(stageName(app.status))}</span><a class="btn ghost sm" href="#applications">My applications</a></span>`;
+  if (isClosed(S.jobs[jobId])) return '<span class="tag warm">Applications closed</span>';
+  return `<span><button class="btn sm" type="button" data-act="applyRoad" data-id="${esc(jobId)}" style="--accent:var(--gold)" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span> Applying…' : 'Apply now'}</button></span>`;
+}
 function analysisBlock(full) {
   const a = analysis();
   if (!a) return `<div class="card stack"><div class="t-m">${esc(t('What is missing').toUpperCase())}</div><div class="empty small">Upload your CV and pick a target job to see what is missing and get your roadmap.</div><div><button class="btn" type="button" data-act="toCV">${esc(t('Upload your CV'))}</button></div></div>`;
@@ -660,7 +676,8 @@ function analysisBlock(full) {
   const road = `<div class="card stack"><div class="row between"><div class="t-m">${esc(t('Your roadmap').toUpperCase())}</div><span class="tiny mute kv">${done.length} of ${(a.roadmap || []).length} done</span></div>
     <ol class="road">${(a.roadmap || []).map((r, i) => `<li class="${done.includes(i) ? 'done' : ''}"><input type="checkbox" id="rd-${i}" data-act="roadDone" data-i="${i}" ${done.includes(i) ? 'checked' : ''} aria-label="Mark step ${i + 1} done"><span class="wk">STEP ${i + 1}</span><span class="stack" style="gap:4px;min-width:0"><b>${esc(r.title)}</b><span class="small mute">${esc(r.detail || '')}</span>
       ${r.kaam ? `<span class="row" style="gap:8px"><a class="btn ghost sm" href="#learn">Course: ${esc(SKILLS[r.kaam].name)}</a><button class="btn ghost sm" type="button" data-act="startQuiz" data-skill="${r.kaam}">Skill check</button></span>` : ''}
-      ${/mentor/i.test(r.title + ' ' + (r.detail || '')) ? `<span><a class="btn ghost sm" href="#mentors">Find a mentor</a></span>` : ''}</span></li>`).join('')}</ol></div>`;
+      ${/mentor/i.test(r.title + ' ' + (r.detail || '')) ? `<span><a class="btn ghost sm" href="#mentors">Find a mentor</a></span>` : ''}
+      ${/^apply\b/i.test(r.title) && a.target && a.target.jobId && S.jobs[a.target.jobId] ? applyRoadBtn(a.target.jobId) : ''}</span></li>`).join('')}</ol></div>`;
   return full ? `<div class="grid g2" style="align-items:start">${missing}${road}</div>` : missing + road;
 }
 function missingCard(a) {
@@ -869,7 +886,7 @@ function pipeHTML(a) {
 function vApps() {
   const apps = myApps().sort((a, b) => (b.at || 0) - (a.at || 0));
   const msg = a => ({
-    applied: a.ready ? 'Ready for review. The employer is comparing the top applicants.' : 'Applied. Get ready below so the employer can shortlist you.',
+    applied: a.ready ? 'Submitted. The employer is reviewing your application.' : 'Applied. Get ready below so the employer can shortlist you.',
     shortlisted: `${a.autoShortlisted ? 'You were shortlisted automatically as a top applicant! ' : 'You have been shortlisted! '}Practise the mock test as often as you like. When you feel ready, start the real proctored assessment. You need 60 or more to reach the interview.`,
     assessment: 'Your proctored assessment has started. Finish it before the timer runs out.',
     interview: `You passed the assessment with ${a.test ? a.test.score : '–'}. You are invited to a video interview. Your name is now shared with the employer.`,
@@ -895,7 +912,7 @@ function simBlocked(a) { const j = S.jobs[a.jobId] || {}; return !!(j.sim && !my
 function readyStep(a) {
   const j = S.jobs[a.jobId] || {};
   if (a.status !== 'applied') return simStep(a);
-  if (a.ready) return `<div class="banner b-ok small">Submitted for review${a.ready.sim != null ? `: work sim <b>${a.ready.sim}/100</b>` : ''}, roadmap courses done. The employer shortlists the top applicants and you get a notification for the proctored assessment.</div>`;
+  if (a.ready) return `<div class="banner b-ok small">Submitted for review${a.ready.sim != null ? `: work sim <b>${a.ready.sim}/100</b>` : ''}, roadmap courses done. The employer reviews it and sends you the proctored assessment if you are shortlisted.</div>`;
   const r = readiness(a); const m = j.sim && simMeta(j.sim);
   const item = (ok, title, sub, btn) => `<li class="${ok ? 'done' : ''}"><span class="stack" style="gap:2px"><b>${ok ? '✓ ' : ''}${title}</b><span class="tiny mute">${sub}</span></span>${ok ? '' : btn}</li>`;
   return `<div class="card simcard stack" style="--accent:var(--gold);background:var(--panel2);padding:14px 16px;gap:10px"><b>Get ready for the shortlist</b>
@@ -1425,6 +1442,40 @@ Make the steps practical for someone in Nepal with a phone and patchy internet. 
   return res;
 }
 
+// ---------- "Thanks for applying" celebration ----------
+function celebrate(job) {
+  const old = document.getElementById('celebrate'); if (old) old.remove();
+  const wrap = document.createElement('div'); wrap.id = 'celebrate'; wrap.className = 'celebrate';
+  wrap.innerHTML = `<canvas aria-hidden="true"></canvas><div class="cel-card card stack" role="dialog" aria-modal="true" aria-labelledby="celT">
+    <div class="cel-badge" aria-hidden="true">🎉</div>
+    <h2 class="t-l" id="celT" style="margin:0 auto">Thanks for applying!</h2>
+    <p style="margin:0">Your application for <b>${esc(job.title)}</b>${job.company ? ` at <b>${esc(job.company)}</b>` : ''} is in.</p>
+    <ol class="cel-next small">
+      <li><b>The employer reviews it</b><span class="mute">Your work sim score, skills and roadmap. Your name stays hidden.</span></li>
+      <li><b>You get the proctored test</b><span class="mute">If you are shortlisted, a notification invites you to the assessment.</span></li>
+      <li><b>Pass it, reach the interview</b><span class="mute">Score 60 or more to be invited.</span></li>
+    </ol>
+    <div class="row" style="justify-content:center"><button class="btn" type="button" data-cel="apps">View my applications</button><button class="btn ghost" type="button" data-cel="close">Close</button></div></div>`;
+  document.body.appendChild(wrap);
+  const close = to => { wrap.remove(); document.removeEventListener('keydown', onKey); if (to) go(to); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  wrap.addEventListener('click', e => { const b = e.target.closest('[data-cel]'); if (b) close(b.dataset.cel === 'apps' ? 'applications' : null); else if (e.target === wrap) close(); });
+  wrap.querySelector('[data-cel=apps]').focus();
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Confetti in prayer-flag colours.
+  const cv = wrap.querySelector('canvas'); const ctx = cv.getContext('2d'); const W = cv.width = innerWidth, H = cv.height = innerHeight;
+  const cols = ['#1D4ED8', '#FFFFFF', '#C8102E', '#15803D', '#F2B705'];
+  const bits = Array.from({ length: 160 }, (_, i) => ({ x: W / 2 + (Math.random() - .5) * 120, y: H * .45, vx: (Math.random() - .5) * 14, vy: -Math.random() * 15 - 5, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, w: 6 + Math.random() * 6, h: 9 + Math.random() * 8, c: cols[i % cols.length] }));
+  const t0 = performance.now();
+  (function frame(t) {
+    if (!document.body.contains(wrap)) return;
+    ctx.clearRect(0, 0, W, H); const age = (t - t0) / 1000;
+    for (const b of bits) { b.vy += .32; b.vx *= .99; b.x += b.vx; b.y += b.vy; b.r += b.vr; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - age / 3.2); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore(); }
+    if (age < 3.4) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+  })(t0);
+}
+
 // ---------- actions ----------
 document.addEventListener('click', async e => {
   const el = e.target.closest('[data-act]'); if (!el) return; const act = el.dataset.act; const p = me();
@@ -1461,9 +1512,25 @@ document.addEventListener('click', async e => {
     if (await savePriv('analysis', { ...res, roadShown: true })) { S.priv.analysis = { ...res, roadShown: true }; toast('Gap analysis ready. Tick off your roadmap courses as you finish them.'); }
     render(); return;
   }
+  if (act === 'applyRoad' && p) {
+    const j = S.jobs[el.dataset.id]; if (!j || S.busy) return;
+    if (isClosed(j)) { toast('Applications are closed for this job.'); render(); return; }
+    S.busy = true; render();
+    let a = Object.values(S.apps).find(x => x.uid === S.uid && x.jobId === j.id);
+    try {
+      if (!a) { const id = nid('a'); const cv = S.priv.cv && S.priv.cv.text; const r = await api('/api/save', { col: 'apps', id, data: { id, jobId: j.id, uid: S.uid, status: 'applied', at: Date.now(), ...(cv ? { cv } : {}) } }); S.apps[id] = a = r.doc; }
+      const r2 = await api('/api/save', { col: 'apps', id: a.id, data: { ...a, ready: true } }); S.apps[a.id] = r2.doc;
+      S.busy = false; render(); celebrate(j);
+    } catch (e) {
+      S.busy = false; render();
+      if (e.message === 'sim_required') { toast('One last step: do the work simulation for this job, then submit.'); return openSim(j.sim); }
+      toast({ analysis_required: 'Get your gap analysis for this job first.', courses_required: 'Tick off all the courses in your roadmap first.', job_closed: 'Applications are closed for this job. The deadline has passed.', already_applied: 'You already applied to this job.' }[e.message] || 'Could not apply. Try again.');
+    }
+    return;
+  }
   if (act === 'submitReady') {
     const a = S.apps[el.dataset.id]; if (!a) return;
-    try { const r = await api('/api/save', { col: 'apps', id: a.id, data: { ...a, ready: true } }); S.apps[a.id] = r.doc; toast(r.doc.status === 'shortlisted' ? 'You are a top applicant and shortlisted! Check Notifications for your proctored assessment.' : 'Submitted for review. You get a notification when you are shortlisted.'); render(); }
+    try { const r = await api('/api/save', { col: 'apps', id: a.id, data: { ...a, ready: true } }); S.apps[a.id] = r.doc; render(); celebrate(S.jobs[a.jobId] || {}); }
     catch (e) { toast({ sim_required: 'Finish the work simulation first.', analysis_required: 'Get your gap analysis for this job first.', courses_required: 'Tick off all the courses in your roadmap first.' }[e.message] || 'Could not submit. Try again.'); }
     return;
   }
@@ -1710,7 +1777,7 @@ document.addEventListener('submit', async e => {
     }
     if (ej && ej.sample) exitEdit();
     const id = nid('j');
-    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...jd, autoShortlist: { on: true, min: 70 }, status: 'open', at: Date.now() })) {
+    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...jd, autoShortlist: { on: false, min: 70 }, status: 'open', at: Date.now() })) {
       S.draft = null; S.selJob = id;
       if (!autoSim) { toast('Job published. Jobseekers can see it now.'); go('job-review'); return; }
       S.genSim = id; go('job-review'); toast('Job published. Creating its work simulation…');

@@ -114,4 +114,4 @@ Applied → **Get ready** → Shortlisted → Proctored assessment → Interview
 2. A gap analysis of their CV against this job (the roadmap must be shown).
 3. Every course step in that roadmap ticked.
 
-Employers see ready applicants first, ranked by 60% work-sim score + 40% skill match, and can **Shortlist the top N** in one click. Optional **auto-shortlist** (on by default for new jobs, bar 70) shortlists a ready applicant straight away when their work-sim score clears the bar; demo jobs always auto-shortlist. Shortlisted candidates get a notification to take the proctored assessment.
+Employers see ready applicants first, ranked by 60% work-sim score + 40% skill match, and can **Shortlist the top N** in one click. Optional **auto-shortlist** (off by default, so the employer reviews and sends the test; bar 70 when on) shortlists a ready applicant straight away when their work-sim score clears the bar; demo jobs always auto-shortlist. Shortlisted candidates get a notification to take the proctored assessment.
