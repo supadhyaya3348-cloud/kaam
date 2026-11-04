@@ -1,6 +1,6 @@
 import { sql, userOf, send, readBody } from './_lib.js';
 import { SIMS, SIM_PASS, publicSim, simList, gradeTask } from './_sims.js';
-import { generateSim, SIM_STORE } from './_simgen.js';
+import { generateSim, SIM_STORE, ruleSim, simInfoOf } from './_simgen.js';
 
 // AI generation can take a while.
 export const config = { maxDuration: 60 };
@@ -10,9 +10,12 @@ async function getSim(id) {
   if (SIMS[id]) return SIMS[id];
   if (!/^gen-[A-Za-z0-9_.:-]{1,120}$/.test(id)) return null;
   const [row] = await sql`SELECT data FROM private_docs WHERE user_id = ${SIM_STORE} AND doc_id = ${id}`;
-  return row ? row.data : null;
+  if (row) return row.data;
+  // Demo jobs without a stored sim get one built from their post.
+  const [job] = await sql`SELECT id, owner, data FROM jobs WHERE id = ${id.slice(4)}`;
+  return job && job.owner === 'sample' && !(job.data && job.data.sim) ? ruleSim(job.data || {}, job.id) : null;
 }
-const simInfo = s => ({ id: s.id, title: s.title, company: s.company, role: s.role, minutes: s.minutes, skills: s.skills, color: s.color, tasks: s.tasks.length, generated: true, by: s.by });
+const simInfo = simInfoOf;
 
 // Work Sims API.
 // GET  /api/sim            -> { sims: [...] }                       list (anyone)

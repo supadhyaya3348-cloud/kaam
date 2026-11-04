@@ -168,3 +168,7 @@ export async function generateSim(job, jobId) {
   const id = 'gen-' + jobId;
   return (await aiSim(job, id)) || ruleSim(job, id);
 }
+
+// Every job has a work sim. Demo jobs (owner "sample") without one use a sim built from their post, on the fly.
+export const simIdFor = (id, owner, data) => (data && data.sim) || (owner === 'sample' ? 'gen-' + id : null);
+export function simInfoOf(s) { return { id: s.id, title: s.title, company: s.company, role: s.role, minutes: s.minutes, skills: s.skills, color: s.color, tasks: s.tasks.length, generated: !!s.generated, by: s.by }; }

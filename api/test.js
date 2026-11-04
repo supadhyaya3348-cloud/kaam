@@ -1,5 +1,6 @@
 import { sql, userOf, send, readBody } from './_lib.js';
 import { testFor, PASS_MARK } from './_mock.js';
+import { simIdFor } from './_simgen.js';
 
 export const TIME_LIMIT_SEC = 10 * 60;
 
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
     const appId = String(req.method === 'GET' ? (req.query && req.query.app) || new URL(req.url, 'http://x').searchParams.get('app') || '' : body.app || '');
     if (!/^[A-Za-z0-9_.:-]{1,120}$/.test(appId)) return send(res, 400, { error: 'bad_request' });
 
-    const [row] = await sql`SELECT a.id, a.user_id, a.status, a.data, j.data AS job FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${appId}`;
+    const [row] = await sql`SELECT a.id, a.user_id, a.status, a.data, a.job_id, j.owner AS job_owner, j.data AS job FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${appId}`;
     if (!row || row.user_id !== user) return send(res, 404, { error: 'not_found' });
     const data = row.data || {};
 
@@ -23,9 +24,10 @@ export default async function handler(req, res) {
       // (Older applications may already sit at "assessment" without a start time.)
       if (!(row.status === 'shortlisted' || (row.status === 'assessment' && !data.testStart))) return send(res, 409, { error: 'not_shortlisted' });
       // Jobs with a work simulation: it must be completed before the proctored test.
-      if (row.job && row.job.sim) {
+      const simId = simIdFor(row.job_id, row.job_owner, row.job);
+      if (simId) {
         const [pr] = await sql`SELECT data FROM profiles WHERE id = ${user}`;
-        if (!(pr && pr.data && pr.data.sims && pr.data.sims[row.job.sim])) return send(res, 409, { error: 'sim_required' });
+        if (!(pr && pr.data && pr.data.sims && pr.data.sims[simId])) return send(res, 409, { error: 'sim_required' });
       }
       const next = { ...data, status: 'assessment', testStart: Date.now() };
       const upd = await sql`UPDATE applications SET status = 'assessment', data = ${JSON.stringify(next)}::jsonb, updated_at = now()

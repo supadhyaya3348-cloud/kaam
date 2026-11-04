@@ -104,3 +104,14 @@ Every job post has an application deadline (default: 14 days ahead). At the end 
 ## Auto-generated work sims
 
 When an employer publishes a job (the "Create a work simulation automatically" box is on by default), `POST /api/sim { action: 'generate', jobId }` builds a 3-task work sim from the job's title, description, requirements and skill weights (`api/_simgen.js`). With `ANTHROPIC_API_KEY` set, Claude writes the tasks and the server validates them strictly; otherwise (or if the AI output is invalid) a rule-based builder picks tasks for the job's top skills and writes a final email task from the job's own requirements. Generated sims and their answer keys are stored server-side in `private_docs` (user `__sims__`); the job only carries public `simInfo`. Employers can preview the sim from the job's applicants page.
+
+## Hiring flow (current)
+
+Applied → **Get ready** → Shortlisted → Proctored assessment → Interview → Hired.
+
+"Get ready" has three steps the applicant must finish before submitting for review, all checked on the server (`api/save.js`):
+1. The job's work simulation (every job has one; demo jobs without a stored sim use one built from their post).
+2. A gap analysis of their CV against this job (the roadmap must be shown).
+3. Every course step in that roadmap ticked.
+
+Employers see ready applicants first, ranked by 60% work-sim score + 40% skill match, and can **Shortlist the top N** in one click. Optional **auto-shortlist** (on by default for new jobs, bar 70) shortlists a ready applicant straight away when their work-sim score clears the bar; demo jobs always auto-shortlist. Shortlisted candidates get a notification to take the proctored assessment.

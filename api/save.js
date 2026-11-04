@@ -1,4 +1,5 @@
 import { sql, userOf, send, readBody } from './_lib.js';
+import { simIdFor } from './_simgen.js';
 
 const MAX_BYTES = 200_000;
 // Hiring pipeline: applied -> shortlisted -> assessment (proctored mock test) -> interview -> selected, or rejected.
@@ -58,6 +59,27 @@ export default async function handler(req, res) {
           data = EXCLUDED.data, updated_at = now()`;
     } else if (col === 'apps') {
       const [cur] = await sql`SELECT a.user_id, a.job_id, a.status, a.data, j.owner FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${id}`;
+      if (cur && user === cur.user_id && user !== cur.owner) {
+        // The applicant submits for review once they are ready: work sim done, gap analysis for this job,
+        // and every course step in that roadmap ticked. Checked here, on the server.
+        if (doc.ready !== true || cur.status !== 'applied' || (cur.data && cur.data.ready)) return send(res, 400, { error: 'bad_request' });
+        const [job] = await sql`SELECT id, owner, data FROM jobs WHERE id = ${cur.job_id}`;
+        const jd = (job && job.data) || {};
+        const simId = simIdFor(cur.job_id, job && job.owner, jd);
+        const [pr] = await sql`SELECT data FROM profiles WHERE id = ${user}`;
+        const simRes = simId ? (((pr && pr.data) || {}).sims || {})[simId] : null;
+        if (simId && !simRes) return send(res, 409, { error: 'sim_required' });
+        const [an] = await sql`SELECT data FROM private_docs WHERE user_id = ${user} AND doc_id = 'analysis'`;
+        const a = an && an.data;
+        if (!a || !a.target || a.target.jobId !== cur.job_id) return send(res, 409, { error: 'analysis_required' });
+        const done = new Set(a.done || []); const courses = (a.roadmap || []).map((r, i) => (r && r.kaam ? i : -1)).filter(i => i >= 0);
+        if (!a.roadShown || courses.some(i => !done.has(i))) return send(res, 409, { error: 'courses_required' });
+        const ready = { at: Date.now(), sim: simRes ? simRes.score : null, courses: courses.length, gaps: (a.missing || []).length };
+        const auto = job && (job.owner === 'sample' || (jd.autoShortlist && jd.autoShortlist.on && (ready.sim == null ? 0 : ready.sim) >= (+jd.autoShortlist.min || 0)));
+        const next = { ...(cur.data || {}), id, uid: cur.user_id, jobId: cur.job_id, ready, ...(auto ? { status: 'shortlisted', shortlistedAt: Date.now(), autoShortlisted: true } : {}) };
+        await sql`UPDATE applications SET status = ${next.status || cur.status}, data = ${j(next)}::jsonb, updated_at = now() WHERE id = ${id} AND status = 'applied'`;
+        return send(res, 200, { ok: true, doc: next });
+      }
       if (cur) {
         // Only the employer who owns the job can move an application, one allowed step at a time.
         if (user !== cur.owner) return send(res, 403, { error: 'forbidden' });
@@ -78,8 +100,9 @@ export default async function handler(req, res) {
         delete doc.test; delete doc.testStart;
         // The applicant's CV is shared with this job's employer only (see api/state.js).
         if (typeof doc.cv !== 'string') delete doc.cv; else doc.cv = doc.cv.slice(0, 12000);
-        // Demo jobs (owner "sample") have no real employer, so every applicant is shortlisted straight away.
-        doc.status = job.owner === 'sample' ? 'shortlisted' : 'applied';
+        // Everyone starts at "applied" and gets ready (work sim, gap analysis, courses) before shortlisting.
+        // Demo jobs (owner "sample") shortlist automatically once the applicant is ready.
+        doc.status = 'applied'; delete doc.ready;
         if (job.owner === 'sample') doc.demo = true;
         await sql`INSERT INTO applications (id, job_id, user_id, status, data) VALUES (${id}, ${job.id}, ${user}, ${doc.status}, ${j(doc)}::jsonb)`;
       }
