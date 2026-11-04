@@ -304,9 +304,11 @@ const mmss = n => { n = Math.max(0, Math.round(n)); return String(Math.floor(n /
 const reqSkill = txt => { const l = String(txt).toLowerCase(); return SK.find(k => REQKW[k].some(w => l.includes(w))) || null; };
 const STAGES = [['applied','Applied'],['shortlisted','Shortlisted'],['assessment','Assessment'],['interview','Interview'],['selected','Hired']];
 const stageName = st => st === 'rejected' ? 'Not selected' : (STAGES.find(x => x[0] === st) || [st, st])[1];
+const MIN_CV_WORDS = 100;
+const wordCount = t => (String(t || '').trim().match(/\S+/g) || []).length;
 const DEMO_CVS = [
-  { name:'Demo CV 1: Sita (fresher)', text:'Sita Gurung\nPokhara, Kaski\n\nEducation\n+2 in Management, Prithvi Narayan Campus, 2025\n\nExperience\nHelped in my family\'s grocery shop for three years: served customers, did data entry of daily sales in the cash book with care for accuracy, counted stock every week and called suppliers by phone to order new stock.\nVolunteer at a school library: arranged books and kept a borrowing register.\n\nSkills\nBasic computer use, MS Word, Facebook and WhatsApp for the shop, spoken Nepali and Gurung, some English.\n\nInterests\nAccounting, learning Excel, helping people.' },
-  { name:'Demo CV 2: Anita (returning after a career break)', text:'Anita Thapa\nLalitpur\n\nSummary\nReturning to work after a five-year career break to raise my children. Before that I worked in an office and handled customers every day.\n\nExperience\nFront desk and customer service officer, travel agency, Kathmandu (2016-2020): answered phone and email enquiries in English, booked tickets, handled complaints and refunds.\nOffice assistant, NGO (2014-2016): typed reports, kept files and wrote meeting notes in English.\n\nSkills\nCustomer service, written English for emails and replies, Canva design for simple posters, Facebook page posts, answering customer messages on Messenger.\n\nEducation\nBBS, Tribhuvan University' }
+  { name:'Demo CV 1: Sita (fresher)', text:'Sita Gurung\nPokhara, Kaski\n\nEducation\n+2 in Management, Prithvi Narayan Campus, 2025\n\nExperience\nHelped in my family\'s grocery shop for three years: served customers, did data entry of daily sales in the cash book with care for accuracy, counted stock every week and called suppliers by phone to order new stock.\nVolunteer at a school library: arranged books and kept a borrowing register.\n\nSkills\nBasic computer use, MS Word, Facebook and WhatsApp for the shop, spoken Nepali and Gurung, some English.\n\nInterests\nAccounting, learning Excel, helping people.\n\nLanguages\nNepali (native), Gurung, basic English. I also help my younger brother with his maths homework every evening.' },
+  { name:'Demo CV 2: Anita (returning after a career break)', text:'Anita Thapa\nLalitpur\n\nSummary\nReturning to work after a five-year career break to raise my children. Before that I worked in an office and handled customers every day.\n\nExperience\nFront desk and customer service officer, travel agency, Kathmandu (2016-2020): answered phone and email enquiries in English, booked tickets, handled complaints and refunds.\nOffice assistant, NGO (2014-2016): typed reports, kept files and wrote meeting notes in English.\n\nSkills\nCustomer service, written English for emails and replies, Canva design for simple posters, Facebook page posts, answering customer messages on Messenger.\n\nEducation\nBBS, Tribhuvan University\n\nLooking for\nRemote or part-time work while my children are at school. References are available on request.' }
 ];
 const LIB = { pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', pdfw:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js', docx:'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js' };
 const NE = {
@@ -560,7 +562,7 @@ function vClimb() {
         <label for="cvFile" class="btn ghost sm" style="display:inline-flex;flex-direction:row">Choose a file<input type="file" id="cvFile" accept=".pdf,.docx,.txt" class="sr"></label>
         ${S.cvMsg ? `<span class="small" role="status">${S.cvMsg}</span>` : ''}</div>
         <div class="stack" style="gap:6px"><span class="small mute">No CV handy? Try a demo:</span><div class="row" style="gap:8px">${DEMO_CVS.map((d, i) => `<button class="btn ghost sm" type="button" data-act="demoCV" data-i="${i}">${esc(d.name)}</button>`).join('')}</div></div>
-        <label for="cvText">Or paste your CV text<textarea id="cvText" style="min-height:180px" placeholder="Education, work experience, skills…">${esc(draft)}</textarea></label>
+        <label for="cvText">Or paste your CV text<textarea id="cvText" style="min-height:180px" placeholder="Education, work experience, skills…">${esc(draft)}</textarea><span class="tiny" id="cvCount" style="font-weight:400;color:${wordCount(draft) >= MIN_CV_WORDS ? 'var(--base)' : 'var(--mute)'}">${wordCount(draft)} / ${MIN_CV_WORDS} words${wordCount(draft) >= MIN_CV_WORDS ? ' ✓' : ''}</span></label>
         <p class="small" id="cvErr" role="alert" style="margin:0;color:var(--warn)"></p>
         <div class="row"><button class="btn" type="button" data-act="cvNext">Continue</button><button class="btn ghost" type="button" data-act="cvSkip">Skip for now</button></div></div></section>`;
   }
@@ -1157,6 +1159,7 @@ async function handleFile(file) {
   try {
     const txt = (await readCV(file)).replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     if (txt.length < 60) { S.cvMsg = 'This file has almost no readable text (it may be a scanned image). Paste your CV text below instead.'; S.cvDraft = txt; }
+    else if (wordCount(txt) < MIN_CV_WORDS) { S.cvDraft = txt.slice(0, 12000); S.cvName = file.name; S.cvMsg = `Read ${esc(file.name)}, but it has only ${wordCount(txt)} words. Add more detail below (${MIN_CV_WORDS} words minimum).`; }
     else { S.cvDraft = txt.slice(0, 12000); S.cvName = file.name; S.cvMsg = `Read ${esc(file.name)}. Check the text below, then continue.`; }
   } catch (e) { S.cvMsg = esc((e && e.message && !/^load$/.test(e.message)) ? e.message : 'Could not read this file. Paste your CV text instead.'); }
   render();
@@ -1276,7 +1279,7 @@ document.addEventListener('click', async e => {
   if (act === 'role' && p) { const nr = p.role === 'employer' ? 'seeker' : 'employer'; if (nr === 'employer' && !p.company) return go('company'); if (nr === 'seeker' && !p.level) { S.flow = 'level'; return go('climb'); } await save('profiles', S.uid, { role: nr }, true); go(nr === 'employer' ? 'employer' : 'dashboard'); }
   if (act === 'cvNext' || act === 'cvSkip') {
     const txt = act === 'cvNext' ? ($('#cvText').value || '').trim() : '';
-    if (act === 'cvNext' && txt.length < 60) { $('#cvErr').textContent = 'Add a bit more CV text (at least a few lines), or choose Skip for now.'; return; }
+    if (act === 'cvNext' && wordCount(txt) < MIN_CV_WORDS) { $('#cvErr').textContent = `Your CV needs at least ${MIN_CV_WORDS} words (you have ${wordCount(txt)}). Add your education, work and skills, or choose Skip for now.`; return; }
     if (txt) { if (!(await savePriv('cv', { text: txt.slice(0, 12000), name: S.cvName || 'Pasted text', at: Date.now() }))) return; S.priv.cv = { text: txt.slice(0, 12000) }; }
     S.cvMsg = ''; S.flow = 'target'; render(); window.scrollTo(0, 0);
   }
@@ -1304,7 +1307,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('input', e => {
   const id = e.target.id;
   if (id === 'js-q') { S.filters.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#js-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} }
-  if (id === 'cvText') S.cvDraft = e.target.value;
+  if (id === 'cvText') { S.cvDraft = e.target.value; const c = $('#cvCount'), n = wordCount(e.target.value); if (c) { c.textContent = `${n} / ${MIN_CV_WORDS} words${n >= MIN_CV_WORDS ? ' ✓' : ''}`; c.style.color = n >= MIN_CV_WORDS ? 'var(--base)' : 'var(--mute)'; } const er = $('#cvErr'); if (er && n >= MIN_CV_WORDS) er.textContent = ''; }
   if (id.startsWith('pj-w-')) { const k = id.slice(5); const v = $('#pj-wv-' + k); if (v) v.textContent = e.target.value; }
   if (id.startsWith('cr-w-')) { const v = $('#cr-wv-' + id.slice(5)); if (v) v.textContent = e.target.value; }
   if (id === 'ex-text') S.exDraft = e.target.value;
