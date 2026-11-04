@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, level = EXCLUDED.level, status = EXCLUDED.status,
           data = EXCLUDED.data, updated_at = now()`;
     } else if (col === 'apps') {
-      const [cur] = await sql`SELECT a.user_id, a.job_id, a.status, a.data, j.owner FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${id}`;
+      const [cur] = await sql`SELECT a.user_id, a.job_id, a.status, a.data, j.owner, j.data AS jdata FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${id}`;
       if (cur && user === cur.user_id && user !== cur.owner) {
         // The applicant submits for review once they are ready: work sim done, gap analysis for this job,
         // and every course step in that roadmap ticked. Checked here, on the server.
@@ -75,14 +75,17 @@ export default async function handler(req, res) {
         const done = new Set(a.done || []); const courses = (a.roadmap || []).map((r, i) => (r && r.kaam ? i : -1)).filter(i => i >= 0);
         if (!a.roadShown || courses.some(i => !done.has(i))) return send(res, 409, { error: 'courses_required' });
         const ready = { at: Date.now(), sim: simRes ? simRes.score : null, courses: courses.length, gaps: (a.missing || []).length };
-        const auto = job && (job.owner === 'sample' || (jd.autoShortlist && jd.autoShortlist.on && (ready.sim == null ? 0 : ready.sim) >= (+jd.autoShortlist.min || 0)));
+        const auto = job && ((job.owner === 'sample' && !jd.openReview) || (jd.autoShortlist && jd.autoShortlist.on && (ready.sim == null ? 0 : ready.sim) >= (+jd.autoShortlist.min || 0)));
         const next = { ...(cur.data || {}), id, uid: cur.user_id, jobId: cur.job_id, ready, ...(auto ? { status: 'shortlisted', shortlistedAt: Date.now(), autoShortlisted: true } : {}) };
         await sql`UPDATE applications SET status = ${next.status || cur.status}, data = ${j(next)}::jsonb, updated_at = now() WHERE id = ${id} AND status = 'applied'`;
         return send(res, 200, { ok: true, doc: next });
       }
       if (cur) {
         // Only the employer who owns the job can move an application, one allowed step at a time.
-        if (user !== cur.owner) return send(res, 403, { error: 'forbidden' });
+        // Demo jobs marked openReview (the demo-day job) can be reviewed by any employer account.
+        let canMove = user === cur.owner;
+        if (!canMove && cur.owner === 'sample' && cur.jdata && cur.jdata.openReview) { const [rp] = await sql`SELECT role FROM profiles WHERE id = ${user}`; canMove = !!(rp && rp.role === 'employer'); }
+        if (!canMove) return send(res, 403, { error: 'forbidden' });
         if (!(NEXT[cur.status] || []).includes(doc.status)) return send(res, 400, { error: 'bad_status' });
         // The employer only changes the stage; the CV snapshot and test result are kept exactly as stored.
         const next = { ...(cur.data || {}), id, uid: cur.user_id, jobId: cur.job_id, status: doc.status, [doc.status + 'At']: Date.now() };

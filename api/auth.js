@@ -3,6 +3,7 @@ import {
   sql, send, readBody, sessionOf, readCookie, COOKIE, SESSION_DAYS,
   hashPassword, verifyPassword, newToken, tokenHash, setSessionCookie, clearSessionCookie
 } from './_lib.js';
+import { resetDemoSeeker } from './_demo.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FAILS = 5;          // wrong passwords allowed...
@@ -22,6 +23,7 @@ async function startSession(res, userId) {
 // GET /api/auth            -> { user: {id, email} | null }
 // POST /api/auth {action: 'signup' | 'login', email, password} -> { user }
 // POST /api/auth {action: 'logout'} -> { ok: true }
+// POST /api/auth {action: 'demo'} -> { user }   log in as the demo jobseeker, freshly reset (see _demo.js)
 export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
@@ -38,6 +40,13 @@ export default async function handler(req, res) {
       if (t) await sql`DELETE FROM sessions WHERE token_hash = ${tokenHash(t)}`;
       clearSessionCookie(res);
       return send(res, 200, { ok: true });
+    }
+
+    if (action === 'demo') {
+      // Demo day: log in as the demo jobseeker (Aarati), reset to a fresh state each time.
+      const u = await resetDemoSeeker();
+      await startSession(res, u.id);
+      return send(res, 200, { user: u, demo: true });
     }
 
     const email = String(body.email || '').trim().toLowerCase();

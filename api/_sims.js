@@ -41,6 +41,41 @@ export const SIMS = {
       }
     ]
   },
+  'cloud-security-day': {
+    id: 'cloud-security-day', title: 'A shift in cloud security', company: 'Himalayan Cloud (demo)', role: 'Cloud security engineer',
+    minutes: 15, skills: ['digital', 'english'], color: 'ridge',
+    manager: { name: 'Mr. Karki', role: 'Head of IT security' },
+    intro: 'Namaste, and welcome to Himalayan Cloud! Overnight our alerts went off. Please check our AWS settings for risky changes, sort the morning alerts, and send me a short incident summary I can share with the client.',
+    tasks: [
+      {
+        id: 't1', kind: 'pick', skill: 'digital', title: 'Find the risky cloud settings',
+        brief: 'Here is this morning’s settings report for a client’s AWS account. Tick every setting that is a security risk.',
+        table: { head: ['Resource', 'Setting'], rows: [['S3 bucket “pokhara-invoices”', 'Public read access: ON'], ['IAM user “intern01”', 'Policy: AdministratorAccess'], ['Security group “web-sg”', 'Port 443 (HTTPS) open to the internet'], ['Security group “db-sg”', 'Port 3306 (MySQL) open to 0.0.0.0/0'], ['Root account', 'MFA on, no access keys'], ['RDS database', 'Encryption at rest: ON (KMS key)']] },
+        key: [0, 1, 3],
+        model: 'Risky: the public invoice bucket (anyone can download customer invoices), an intern with full admin rights (breaks least privilege), and the database port open to the whole internet. Fine: HTTPS on 443 is normal for a website, the root account is locked down with MFA, and the database is encrypted with KMS.'
+      },
+      {
+        id: 't2', kind: 'classify', skill: 'digital', title: 'Triage the morning alerts',
+        brief: 'Label each alert from the SIEM so the team knows what to handle first.',
+        labels: ['Critical', 'Investigate', 'Normal'],
+        table: { head: ['Time', 'Alert'], rows: [['03:12', '50 failed SSH logins to the bastion host from one foreign IP, then one success'], ['08:40', 'A new access key was created for the root account'], ['10:05', 'Developer logged in from the Kathmandu office with MFA'], ['11:30', 'S3 bucket policy changed by the deploy pipeline during a planned release'], ['14:00', 'Antivirus signatures updated on 40 servers']] },
+        key: ['Critical', 'Critical', 'Normal', 'Investigate', 'Normal'],
+        model: 'Critical: a brute-force attack that succeeded, and a root access key nobody should create. Investigate: a policy change during a release is probably fine, but check it matches the change plan. Normal: an MFA login from the office and routine antivirus updates.'
+      },
+      {
+        id: 't3', kind: 'write', skill: 'english', title: 'Write the incident summary',
+        brief: 'Write me a short incident summary (40 to 120 words) I can share with the client: what happened overnight, the risky settings you found, what you did, and what happens next.',
+        rubric: [
+          { label: 'Explains the SSH brute-force login', any: ['ssh', 'brute', 'failed login', 'bastion'] },
+          { label: 'Mentions the risky settings (public bucket, admin access or open database port)', any: ['bucket', 'public', 'admin', '3306', 'database port', 'intern'] },
+          { label: 'Says what you did to contain it', any: ['block', 'disable', 'rotate', 'revoke', 'close', 'restrict', 'removed'] },
+          { label: 'Gives next steps and timing', any: ['today', 'tomorrow', 'will ', 'within', 'hours', 'next'] },
+          { label: 'Clear and professional', any: ['dear', 'regards', 'thank', 'namaste'] }
+        ],
+        model: 'Dear Mr. Karki, at 03:12 an attacker made 50 failed SSH logins to the bastion host and then got in. I blocked the IP, disabled the account and rotated all keys. I also found three risky settings: a public invoice bucket, an intern with admin access, and the database port open to the internet. I closed all three this morning. Today I will check the logs for any data taken and send the client a full report by 5 pm. Regards, Aarati'
+      }
+    ]
+  },
   'support-shift': {
     id: 'support-shift', title: 'A shift in online customer support', company: 'Himal Crafts (demo)', role: 'Social media and support assistant',
     minutes: 15, skills: ['service', 'digital', 'english'], color: 'ridge',

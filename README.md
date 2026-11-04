@@ -115,3 +115,8 @@ Applied → **Get ready** → Shortlisted → Proctored assessment → Interview
 3. Every course step in that roadmap ticked.
 
 Employers see ready applicants first, ranked by 60% work-sim score + 40% skill match, and can **Shortlist the top N** in one click. Optional **auto-shortlist** (off by default, so the employer reviews and sends the test; bar 70 when on) shortlists a ready applicant straight away when their work-sim score clears the bar; demo jobs always auto-shortlist. Shortlisted candidates get a notification to take the proctored assessment.
+
+## Demo day
+
+- **Demo job:** "Cloud security engineer" at *Demo: Himalayan Cloud Pvt. Ltd.* (`demo-cloud-security`), created automatically by `api/_demo.js`, with 8 requirements, AWS/Linux/Python extra skills and its own work sim (`cloud-security-day`). Any employer account can review it and send the proctored test.
+- **Demo jobseeker:** on the Log in page, **Log in as demo jobseeker (Aarati)**. Aarati's verified skills (100 in all four), CV and portfolio match every requirement. Each click resets her to a fresh state (no applications, no sim or roadmap progress), so the journey can be shown again and again. The account has no usable password.

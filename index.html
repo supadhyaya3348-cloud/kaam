@@ -527,6 +527,9 @@ function vLogin() {
       <p class="tiny" id="authErr" role="alert" style="margin:0;color:var(--warn)"></p>
       <div class="row"><button class="btn" type="submit" style="flex:1" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Please wait…' : signup ? 'Create account' : 'Log in'}</button></div>
     </form>
+    <div class="card stack" style="gap:8px;background:var(--panel2);text-align:center">
+      <b>Demo day</b><span class="small mute">Try CareerCamp as Aarati, a cloud security jobseeker whose verified skills match the demo job “Cloud security engineer”. Starts fresh every time.</span>
+      <div><button class="btn ghost" type="button" data-act="demoLogin" ${S.busy ? 'disabled' : ''}>Log in as demo jobseeker (Aarati)</button></div></div>
     <p class="small mute" style="text-align:center;margin:0">${signup ? 'Already have an account? <a href="#login" data-act="authMode" data-m="login">Log in</a>' : 'New here? <a href="#login" data-act="authMode" data-m="signup">Create an account</a>'}</p>
   </section>`;
 }
@@ -1135,12 +1138,12 @@ function applicantsBlock(j) {
       <div class="card stack" style="background:var(--panel2);gap:10px;padding:14px">
         <div class="row between"><b>Shortlist the top applicants</b><span class="tiny mute">${waiting.length} ready and waiting</span></div>
         <div class="row" style="gap:8px"><label for="topN" class="row" style="flex-direction:row;gap:6px;font-weight:400">Top <select id="topN" style="width:auto">${[1, 2, 3, 5, 10].map(n => `<option ${n === (S.topN || 3) ? 'selected' : ''}>${n}</option>`).join('')}</select></label><button class="btn sm" type="button" data-act="shortlistTop" data-id="${esc(j.id)}" style="--accent:var(--gold)" ${waiting.length && !S.busy ? '' : 'disabled'}>Shortlist and send proctored test</button></div>
-        ${j.sample ? '<div class="tiny mute">Demo job: ready applicants are shortlisted automatically.</div>' : `<label class="check" for="autoSL" style="font-weight:400"><input type="checkbox" id="autoSL" data-id="${esc(j.id)}" ${AS.on ? 'checked' : ''}> <span>Automatically shortlist ready applicants with a work sim score of <select id="autoMin" data-id="${esc(j.id)}" style="width:auto;display:inline-block;padding:2px 6px">${[50, 60, 70, 80, 90].map(n => `<option ${n === (+AS.min || 70) ? 'selected' : ''}>${n}</option>`).join('')}</select> or more</span></label>`}
+        ${j.sample && j.openReview ? '<div class="tiny mute">Demo job: any employer account can review it and send the proctored test.</div>' : j.sample ? '<div class="tiny mute">Demo job: ready applicants are shortlisted automatically.</div>' : `<label class="check" for="autoSL" style="font-weight:400"><input type="checkbox" id="autoSL" data-id="${esc(j.id)}" ${AS.on ? 'checked' : ''}> <span>Automatically shortlist ready applicants with a work sim score of <select id="autoMin" data-id="${esc(j.id)}" style="width:auto;display:inline-block;padding:2px 6px">${[50, 60, 70, 80, 90].map(n => `<option ${n === (+AS.min || 70) ? 'selected' : ''}>${n}</option>`).join('')}</select> or more</span></label>`}
         <div class="tiny mute">Shortlisted candidates get a notification to take the proctored assessment.</div></div>
       ${j.blind ? '<div class="banner b-warn small">Blind hiring is on. Names and contact details stay hidden until a candidate passes the assessment and reaches the interview.</div>' : ''}
       <div class="list">${apps.length ? apps.map(([a, x, m], i) => { const show = !j.blind || a.status === 'interview' || a.status === 'selected'; const sc = scoresOf(x); return `<div class="stack" style="gap:6px">
         <div class="row between"><b>${i + 1}. ${show ? esc(x.name) + ' · ' + esc(x.district || '') : 'Candidate ' + code(a.uid)}</b><span class="row">${a.status === 'applied' ? (a.ready ? `<span class="tag base">Ready · ${readyScore(a, j)}</span>` : '<span class="tag">Getting ready</span>') : ''}<b class="kv">Match ${m}</b><span class="tag ${a.status === 'selected' || a.status === 'interview' ? 'base' : a.status === 'rejected' ? 'warm' : ''}">${esc(stageName(a.status))}</span></span></div>${pipeHTML(a)}
-        <div class="tiny mute">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `${esc(SKILLS[k].name)} ${sc[k] != null ? sc[k] : '–'}`).join(' · ')} · ${(x.portfolio || []).length} work samples · ${a.cv ? 'CV shared' : 'no CV'}${j.sim && x.sims && x.sims[j.sim] ? ' · work sim ' + x.sims[j.sim].score : ''}${a.ready ? ' · roadmap courses ' + a.ready.courses + '/' + a.ready.courses : ''}${aiScores()[a.id] ? ' · fit ' + aiScores()[a.id].overall : ''}${a.test ? ' · assessment ' + a.test.score : ''}</div>
+        <div class="tiny mute">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `${esc(SKILLS[k].name)} ${sc[k] != null ? sc[k] : '–'}`).join(' · ')} · ${(x.portfolio || []).length} work samples · ${a.cv ? 'CV shared' : 'no CV'}${j.sim && x.sims && x.sims[j.sim] ? ' · work sim ' + x.sims[j.sim].score : ''}${a.ready ? (a.ready.courses ? ' · roadmap courses ' + a.ready.courses + '/' + a.ready.courses : ' · no courses needed') : ''}${aiScores()[a.id] ? ' · fit ' + aiScores()[a.id].overall : ''}${a.test ? ' · assessment ' + a.test.score : ''}</div>
         <div class="row"><button class="btn sm" type="button" data-act="revApp" data-id="${esc(a.id)}" style="--accent:var(--gold)">Review skills, CV and test</button></div></div>`; }).join('') : '<div class="empty">No applicants yet. They appear here ranked by skill match.</div>'}</div></div>
     <div class="card stack"><div class="t-m" style="color:var(--gold)">FAIR HIRING CHECK</div>
       <div class="scroll"><table class="fair"><thead><tr><th>Share of candidates</th>${Object.keys(groups).map(g => `<th>${g}</th>`).join('')}</tr></thead><tbody>
@@ -1511,6 +1514,17 @@ document.addEventListener('click', async e => {
     const res = await runAnalysis({ jobId: j.id, title: j.title }); S.busy = false;
     if (await savePriv('analysis', { ...res, roadShown: true })) { S.priv.analysis = { ...res, roadShown: true }; toast('Gap analysis ready. Tick off your roadmap courses as you finish them.'); }
     render(); return;
+  }
+  if (act === 'demoLogin') {
+    if (S.busy) return; S.busy = true; render();
+    try {
+      const r = await api('/api/auth', { action: 'demo' });
+      S.uid = r.user.id; S.email = r.user.email; S.authEmail = ''; S.priv = {}; S.chat = []; S.target = null; S.draft = null; S.selJob = null;
+      try { await pull(); } catch (x) {}
+      if (!(S.simList || []).length) { try { S.simList = (await api('/api/sim')).sims || []; } catch (x) {} }
+      S.busy = false; toast('Logged in as Aarati, the demo jobseeker. Everything is reset.'); afterLogin();
+    } catch (x) { S.busy = false; render(); toast('Could not start the demo. Check your connection and try again.'); }
+    return;
   }
   if (act === 'applyRoad' && p) {
     const j = S.jobs[el.dataset.id]; if (!j || S.busy) return;
