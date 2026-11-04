@@ -1,7 +1,16 @@
 import { sql, userOf, send, readBody } from './_lib.js';
 
 const MAX_BYTES = 200_000;
-const APP_STATUS = ['applied', 'shortlisted', 'selected', 'rejected'];
+// Hiring pipeline: applied -> shortlisted -> assessment (mock test) -> interview -> selected, or rejected at any stage.
+// "interview" is only reached by passing the mock test (see api/test.js), never set by hand.
+const NEXT = {
+  applied: ['shortlisted', 'rejected'],
+  shortlisted: ['assessment', 'rejected'],
+  assessment: ['rejected'],
+  interview: ['selected', 'rejected'],
+  selected: [],
+  rejected: []
+};
 const MENT_STATUS = ['requested', 'accepted', 'declined', 'done'];
 
 // POST /api/save { col, id, data } — upserts one document, with ownership checks per collection.
@@ -33,21 +42,26 @@ export default async function handler(req, res) {
         ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, level = EXCLUDED.level, status = EXCLUDED.status,
           data = EXCLUDED.data, updated_at = now()`;
     } else if (col === 'apps') {
-      const [cur] = await sql`SELECT a.user_id, a.job_id, j.owner FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${id}`;
+      const [cur] = await sql`SELECT a.user_id, a.job_id, a.status, a.data, j.owner FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ${id}`;
       if (cur) {
-        // Only the employer who owns the job can move an application through the stages.
+        // Only the employer who owns the job can move an application, one allowed step at a time.
         if (user !== cur.owner) return send(res, 403, { error: 'forbidden' });
-        if (!APP_STATUS.includes(doc.status)) return send(res, 400, { error: 'bad_status' });
+        if (!(NEXT[cur.status] || []).includes(doc.status)) return send(res, 400, { error: 'bad_status' });
         doc.uid = cur.user_id; doc.jobId = cur.job_id;
+        // The test result can only come from api/test.js.
+        if (cur.data && cur.data.test) doc.test = cur.data.test; else delete doc.test;
         await sql`UPDATE applications SET status = ${doc.status}, data = ${j(doc)}::jsonb, updated_at = now() WHERE id = ${id}`;
       } else {
         if (doc.uid !== user) return send(res, 403, { error: 'forbidden' });
-        const [job] = await sql`SELECT id FROM jobs WHERE id = ${String(doc.jobId || '')}`;
+        const [job] = await sql`SELECT id, owner FROM jobs WHERE id = ${String(doc.jobId || '')}`;
         if (!job) return send(res, 400, { error: 'job_not_found' });
         const [dup] = await sql`SELECT 1 AS x FROM applications WHERE job_id = ${job.id} AND user_id = ${user}`;
         if (dup) return send(res, 409, { error: 'already_applied' });
-        doc.status = 'applied';
-        await sql`INSERT INTO applications (id, job_id, user_id, status, data) VALUES (${id}, ${job.id}, ${user}, 'applied', ${j(doc)}::jsonb)`;
+        delete doc.test;
+        // Demo jobs (owner "sample") have no real employer, so they send every applicant straight to the mock test.
+        doc.status = job.owner === 'sample' ? 'assessment' : 'applied';
+        if (job.owner === 'sample') doc.demo = true;
+        await sql`INSERT INTO applications (id, job_id, user_id, status, data) VALUES (${id}, ${job.id}, ${user}, ${doc.status}, ${j(doc)}::jsonb)`;
       }
     } else if (col === 'mentorships') {
       const [cur] = await sql`SELECT mentee, mentor FROM mentorships WHERE id = ${id}`;
@@ -59,8 +73,11 @@ export default async function handler(req, res) {
         await sql`UPDATE mentorships SET status = ${doc.status}, data = ${j(doc)}::jsonb, updated_at = now() WHERE id = ${id}`;
       } else {
         if (doc.mentee !== user || !doc.mentor || doc.mentor === user) return send(res, 403, { error: 'forbidden' });
-        doc.status = 'requested';
-        await sql`INSERT INTO mentorships (id, mentee, mentor, status, data) VALUES (${id}, ${user}, ${String(doc.mentor)}, 'requested', ${j(doc)}::jsonb)`;
+        const [mp] = await sql`SELECT data FROM profiles WHERE id = ${String(doc.mentor)}`;
+        if (!mp || !mp.data.mentor) return send(res, 400, { error: 'not_a_mentor' });
+        // Demo mentors accept straight away so the video-call step can be shown.
+        doc.status = mp.data.sample ? 'accepted' : 'requested';
+        await sql`INSERT INTO mentorships (id, mentee, mentor, status, data) VALUES (${id}, ${user}, ${String(doc.mentor)}, ${doc.status}, ${j(doc)}::jsonb)`;
       }
     } else if (col === 'private') {
       await sql`INSERT INTO private_docs (user_id, doc_id, data) VALUES (${user}, ${id}, ${j(doc)}::jsonb)

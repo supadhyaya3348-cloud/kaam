@@ -60,3 +60,14 @@ can accept or decline a session.
 - Logging in creates a random session token kept in an **HttpOnly, Secure, SameSite=Lax** cookie for 30 days. The database stores only a SHA-256 of the token.
 - 5 wrong passwords for one email locks that email for 15 minutes.
 - Saving anything, private CV data and AI calls all require a logged-in session; the server decides who you are from the cookie, not from the browser.
+
+## Hiring pipeline
+Applied → Shortlisted → Assessment (mock test) → Interview → Hired, or "Not now" at any stage.
+- The employer can only move an application one allowed step at a time (`api/save.js`).
+- The mock test (`api/test.js`, questions in `api/_mock.js`) is picked from the job's skill weights. Answers stay on the server, each candidate gets one try, and 60+ moves them to Interview automatically. Blind hiring reveals the name only at Interview.
+- Interviews use a free Jitsi room shared by both sides.
+
+## Demos
+- Demo jobs `demo-bookkeeping` and `demo-social-media` have requirements. Applying sends you straight to the mock test so the whole journey can be shown with one account.
+- Demo mentors `demo-mentor-asha` and `demo-mentor-rabin` accept requests instantly.
+- Two demo CVs on the CV upload step.
