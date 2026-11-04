@@ -1,8 +1,8 @@
 // Kaam service worker: keeps the app itself available offline.
 // The page saves each user's roadmap and courses in the browser (see "offline" in index.html);
 // this worker only makes sure the page, fonts and script libraries still load with no connection.
-const CACHE = 'kaam-shell-v1';
-const SHELL = ['/', '/index.html'];
+const CACHE = 'kaam-shell-v2';
+const SHELL = ['/', '/index.html', '/ne.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -28,9 +28,9 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate' || (url.origin === location.origin && SHELL.includes(url.pathname))) {
     e.respondWith(
       fetch(req).then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('/', copy)); }
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req.mode === 'navigate' ? '/' : url.pathname, copy)); }
         return res;
-      }).catch(() => caches.match('/').then(r => r || caches.match('/index.html')))
+      }).catch(() => caches.match(req.mode === 'navigate' ? '/' : url.pathname).then(r => r || caches.match('/index.html')))
     );
     return;
   }

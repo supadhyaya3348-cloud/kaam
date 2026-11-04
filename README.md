@@ -80,3 +80,6 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 - After each sync, the signed-in user's roadmap, courses, jobs and applications are saved in the browser. Offline, the app shows them with an "offline" banner.
 - Roadmap steps and course lessons ticked offline are queued and sent automatically when the connection returns. Other actions (apply, tests, posting) need a connection.
 - Logging out removes the saved copy from the device.
+
+## Nepali
+`ne.js` holds the Nepali translation of the whole interface (dictionary plus patterns for sentences that contain names or job titles). When Nepali is chosen, every screen, message and label is translated after it renders; user content (CVs, job descriptions, names, districts) stays as written. Excel formulas and English example sentences in the English quiz are kept in English on purpose.
