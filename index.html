@@ -103,7 +103,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .banner{border-radius:10px;padding:10px 14px;font-size:14px}
 .b-info{background:var(--track)} .b-warn{background:var(--warnbg);color:var(--warn)} .b-ok{background:#DDF3EC;color:#0B5A45}
 label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:15px}
-input[type=text],input[type=url],input[type=email],input[type=password],input[type=search],input[type=number],input[type=datetime-local],input[type=date],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+input[type=text],input[type=url],input[type=email],input[type=password],input[type=search],input[type=number],input[type=datetime-local],input[type=date],input[type=tel],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
 textarea{min-height:110px;resize:vertical}
 .check{flex-direction:row;align-items:center;gap:10px;font-weight:400}
 .check input{width:20px;height:20px;accent-color:var(--ridge)}
@@ -420,6 +420,11 @@ async function save(col, id, data, merge) {
   }
   const st = store(col); st[id] = merge ? { ...(st[id] || {}), ...data, id } : { ...data, id }; persistLocal(); render(); return true;
 }
+// Nepali mobile (98XXXXXXXX / 97XXXXXXXX, optional +977) or landline (0 + area code + number).
+function normPhone(v) {
+  let d = String(v || '').replace(/[\s\-().]/g, ''); if (d.startsWith('+977')) d = d.slice(4); else if (d.startsWith('977') && d.length === 13) d = d.slice(3);
+  return /^9[678]\d{8}$/.test(d) || /^0\d{7,9}$/.test(d) ? d : '';
+}
 async function savePriv(docId, data) {
   if (S.offline) {
     if (docId === 'analysis') { S.priv.analysis = data; queueOffline('analysis', data); render(); return true; }
@@ -636,6 +641,7 @@ function profileForm(role, p) {
       <input type="hidden" id="f-role" value="${esc(role)}">
       <label for="f-name">Your name<input type="text" id="f-name" required value="${esc(p.name || '')}" autocomplete="name"></label>
       ${role === 'employer' ? `<label for="f-company">Company name<input type="text" id="f-company" required value="${esc(p.company || '')}"></label>` : ''}
+      <label for="f-phone">Phone number<input type="tel" id="f-phone" required inputmode="tel" autocomplete="tel" value="${esc(((S.priv.contact || {}).phone) || '')}" placeholder="e.g. 98XXXXXXXX"><span class="tiny mute" style="font-weight:400">${role === 'employer' ? 'Shared only with candidates you invite to an interview.' : 'Kept private. Shared only with an employer who invites you to an interview.'}</span></label>
       <label for="f-district">District<input type="text" id="f-district" list="districts" required value="${esc(p.district || '')}" placeholder="e.g. Kaski"></label>
       <datalist id="districts"><option>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option><option>Kaski</option><option>Chitwan</option><option>Morang</option><option>Rupandehi</option><option>Jhapa</option><option>Banke</option><option>Kailali</option><option>Dhanusha</option><option>Sunsari</option></datalist>
       ${role === 'seeker' ? `<label for="f-gender">Gender (optional, used only for anonymous fair hiring totals)<select id="f-gender">
@@ -876,7 +882,7 @@ function vApps() {
       ${readyStep(a)}
       <div class="row">${a.status === 'shortlisted' || (a.status === 'assessment' && !a.testStart) ? `<button class="btn ghost sm" type="button" data-act="practice" data-id="${esc(a.id)}">Practise mock test</button><button class="btn sm" type="button" data-act="readyTest" data-id="${esc(a.id)}" style="--accent:var(--gold)" ${simBlocked(a) ? 'disabled title="Finish the work simulation first"' : ''}>I'm ready: start real assessment</button>` : ''}
         ${a.status === 'assessment' && a.testStart && !a.test ? `<button class="btn sm" type="button" data-act="resumeTest" data-id="${esc(a.id)}" style="--accent:var(--gold)">Resume assessment</button>` : ''}
-        ${a.status === 'interview' || a.status === 'selected' ? `<a class="btn sm" href="${roomUrl('iv-' + a.id)}" target="_blank" rel="noopener" style="--accent:var(--base)">Join interview call</a><span class="tiny mute">Free Jitsi room shared with the employer.</span>` : ''}</div></div>`; }).join('') : '<div class="empty">No applications yet. <a href="#jobs">Find a matched job</a></div>'}</div></section>`;
+        ${a.status === 'interview' || a.status === 'selected' ? `<a class="btn sm" href="${roomUrl('iv-' + a.id)}" target="_blank" rel="noopener" style="--accent:var(--base)">Join interview call</a><span class="tiny mute">Free Jitsi room shared with the employer.</span>${a.employerPhone ? `<a class="btn ghost sm" href="tel:${esc(a.employerPhone)}">Call employer: ${esc(a.employerPhone)}</a>` : ''}` : ''}</div></div>`; }).join('') : '<div class="empty">No applications yet. <a href="#jobs">Find a matched job</a></div>'}</div></section>`;
 }
 function practiceQs(j) {
   const w = (j && j.skills) || {}; const ks = SK.filter(k => (+w[k] || 0) > 0).sort((a, b) => (+w[b] || 0) - (+w[a] || 0)); const use = ks.length ? ks : SK;
@@ -1066,6 +1072,7 @@ function appActions(a, j) {
   return `<div class="row">${a.status === 'applied' ? `<button class="btn sm" style="--accent:var(--gold)" type="button" data-act="setStatus" data-id="${esc(a.id)}" data-s="shortlisted">Shortlist and send proctored test</button>` : ''}
     ${a.status === 'shortlisted' ? '<span class="tiny mute">Shortlisted. The candidate is practising and will start the proctored assessment when ready.</span>' : ''}
     ${a.status === 'assessment' ? `<span class="tiny mute">Proctored assessment ${a.testStart ? 'in progress' : 'sent'}.</span>` : ''}
+    ${a.phone && (a.status === 'interview' || a.status === 'selected') ? `<a class="btn ghost sm" href="tel:${esc(a.phone)}">Call candidate: ${esc(a.phone)}</a>` : ''}
     ${a.status === 'interview' ? `<a class="btn sm" href="${roomUrl('iv-' + a.id)}" target="_blank" rel="noopener" style="--accent:var(--base)">Join interview call</a><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="setStatus" data-id="${esc(a.id)}" data-s="selected">Hire</button>` : ''}
     ${a.status === 'selected' ? '<span class="tag base">Hired</span>' : ''}
     ${!['rejected', 'selected'].includes(a.status) ? `<button class="btn ghost sm" type="button" data-act="setStatus" data-id="${esc(a.id)}" data-s="rejected">Not now</button>` : ''}</div>`;
@@ -1647,6 +1654,10 @@ document.addEventListener('submit', async e => {
     const role = $('#f-role').value, name = $('#f-name').value.trim(), district = $('#f-district').value.trim();
     const company = role === 'employer' ? $('#f-company').value.trim() : (p && p.company) || '';
     if (!name || !district || (role === 'employer' && !company)) { $('#formErr').textContent = 'Fill in your name, district' + (role === 'employer' ? ' and company name.' : '.'); return; }
+    const phone = normPhone(($('#f-phone') || { value: '' }).value);
+    if (!phone) { $('#formErr').textContent = 'Enter a valid Nepali phone number, e.g. 98XXXXXXXX.'; $('#f-phone').focus(); return; }
+    // The number is stored privately (never in the public profile) and shared only at the interview stage.
+    if (phone !== ((S.priv.contact || {}).phone) && !(await savePriv('contact', { phone }))) return;
     const data = { id: S.uid, role, name, district, company, lang: S.lang, createdAt: (p && p.createdAt) || Date.now() };
     if (role === 'seeker') { data.gender = $('#f-gender').value; data.careerBreak = $('#f-break').checked; data.level = S.pick || (p && p.level) || 'fresher'; }
     if (await save('profiles', S.uid, data, true)) { if (role === 'employer') { toast('Company saved.'); go('employer'); } else { S.flow = 'cv'; render(); window.scrollTo(0, 0); } }
