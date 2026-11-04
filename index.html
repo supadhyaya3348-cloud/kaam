@@ -35,7 +35,9 @@ nav.main a[aria-current="page"]{background:#33245A;color:var(--text)}
 .pill{border:1px solid var(--line);border-radius:99px;padding:5px 12px;background:none;cursor:pointer;color:var(--mute);font-size:14px}
 .pill[aria-pressed="true"]{background:var(--ridge);color:var(--ink);border-color:var(--ridge);font-weight:800}
 a.pill{text-decoration:none;display:inline-block}
-.acct{display:flex;gap:8px;align-items:center}
+.acct{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.topsearch{display:flex}
+.topsearch input[type=search]{min-height:34px;padding:5px 12px;border-radius:99px;width:200px;font-size:14px}
 .acct .who{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .authbox{max-width:440px;margin:0 auto}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;padding:4px;gap:4px}
@@ -72,7 +74,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .banner{border-radius:10px;padding:10px 14px;font-size:14px}
 .b-info{background:var(--track)} .b-warn{background:var(--warnbg);color:var(--warn)} .b-ok{background:#1F4A3E;color:#BDF0DF}
 label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:15px}
-input[type=text],input[type=url],input[type=datetime-local],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+input[type=text],input[type=url],input[type=email],input[type=password],input[type=search],input[type=number],input[type=datetime-local],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
 textarea{min-height:110px;resize:vertical}
 .check{flex-direction:row;align-items:center;gap:10px;font-weight:400}
 .check input{width:20px;height:20px;accent-color:var(--ridge)}
@@ -431,7 +433,7 @@ function vLogout() {
 }
 function acctHTML() {
   if (!S.api) return '';
-  if (S.uid) { const n = me() ? unread() : 0; return `<a class="pill" href="#alerts" aria-label="Notifications${n ? ', ' + n + ' unread' : ''}">Notifications${n ? `<span class="badge">${n}</span>` : ''}</a><span class="tiny mute who" title="${esc(S.email || '')}">${esc(S.email || '')}</span><button class="pill" type="button" data-act="logout">Log out</button>`; }
+  if (S.uid) { const n = me() ? unread() : 0; const sk = me() && me().role === 'seeker'; return `${sk && S.route !== 'jobs' ? `<form class="topsearch" id="ts" role="search"><label class="sr" for="ts-q">Search jobs</label><input type="search" id="ts-q" placeholder="Search jobs…" value="${esc(S.filters.q)}" autocomplete="off"></form>` : ''}<a class="pill" href="#alerts" aria-label="Notifications${n ? ', ' + n + ' unread' : ''}">Notifications${n ? `<span class="badge">${n}</span>` : ''}</a><span class="tiny mute who" title="${esc(S.email || '')}">${esc(S.email || '')}</span><button class="pill" type="button" data-act="logout">Log out</button>`; }
   return S.route === 'login' ? '' : `<a class="pill" href="#login" data-act="authMode" data-m="login">Log in</a>`;
 }
 function afterLogin() {
@@ -616,7 +618,7 @@ function vDashboard() {
     <div class="card stack"><div class="t-m">MENTOR OTHERS</div>
       ${p.mentor ? `<div class="banner b-ok small">You are listed as a mentor. Members can book video sessions with you.</div><div class="tiny mute">Mentor credit: ${sess.filter(s => s.mentor === S.uid && s.status === 'done').length} sessions done</div><div><button class="btn ghost sm" type="button" data-act="toggleMentor">Stop mentoring</button></div>`
         : `<div class="small mute">Offer short video sessions to Base Camp and Ridge members. Your mentor badge shows on your portfolio.</div><div><button class="btn" type="button" data-act="toggleMentor" style="--accent:var(--summit)">Offer mentoring</button></div>`}</div>`;
-  return `<section class="stack" style="gap:20px">
+  return `<section class="stack" style="gap:20px">${searchBar('ds', false)}
     <div class="framed" style="--accent:${tr.color}">${gems}
       <div class="row between" style="align-items:flex-start;gap:20px">
         <div class="stack" style="gap:4px;min-width:0"><div class="mute small">${esc(t('Your tier'))} · only you can see this</div><div class="row" style="gap:10px"><span class="tiername">${esc(tr.name.toUpperCase())}</span><span class="tag ${tr.verified ? 'base' : 'warm'}">${tr.verified ? 'Verified' : 'Not verified yet'}</span></div><h1 class="t-l" style="font-size:28px">Namaste, ${esc(p.name)}</h1></div>
@@ -1127,8 +1129,10 @@ function loadDraft(k) { try { return JSON.parse(localStorage.getItem('kaam-quiz-
 
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const p = me();
+  if (f.id === 'ds' || f.id === 'ts') { S.filters.q = ($('#' + f.id + '-q').value || '').trim(); S.selJob = null; go('jobs'); window.scrollTo(0, 0); return; }
   if (f.id === 'hs' || f.id === 'js') {
     S.filters.q = ($('#' + f.id + '-q').value || '').trim();
+    if (f.id === 'hs' && S.uid && me() && me().role === 'seeker') { S.selJob = null; go('jobs'); window.scrollTo(0, 0); return; }
     if (f.id === 'hs') { S.homeSearch = true; render(); const r = $('#homeResults'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else render();
     return;
