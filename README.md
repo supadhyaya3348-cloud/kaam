@@ -95,3 +95,8 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 - Definitions and answer keys live only on the server (`api/_sims.js`); `api/sim.js` grades each task once (written tasks use AI when switched on, else a rubric), writes a verified result to the profile and, on a pass, a work sample to the portfolio. Users cannot edit sim results through `/api/save`.
 - Employers can attach a sim to a job. It becomes a hiring stage: Shortlisted → Work sim → Proctored test (the test cannot start until the sim is done). Employers see the score per task on the candidate page.
 - Demo: "A day as junior bookkeeper" (Pokhara Traders) on the bookkeeping demo job, and "A shift in online customer support" (Himal Crafts) on the social media demo job.
+
+
+## Application deadlines
+
+Every job post has an application deadline (default: 14 days ahead). At the end of that day (Nepal time) the job closes automatically: it disappears from job search and matches, shows a "Closed" tag to the employer, and the server refuses new applications (`job_closed`). Applicants already in the pipeline continue as normal.

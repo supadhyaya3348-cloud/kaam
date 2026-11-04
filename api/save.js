@@ -44,6 +44,10 @@ export default async function handler(req, res) {
       if (cur ? cur.owner !== user : doc.owner !== user) return send(res, 403, { error: 'forbidden' });
       if (!doc.title || typeof doc.title !== 'string') return send(res, 400, { error: 'title_required' });
       doc.owner = cur ? cur.owner : user; delete doc.sample;
+      // Application deadline (YYYY-MM-DD). The job closes automatically at the end of that day, Nepal time.
+      if (doc.deadline != null && doc.deadline !== '') {
+        if (typeof doc.deadline !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(doc.deadline) || isNaN(Date.parse(doc.deadline + 'T23:59:59+05:45'))) return send(res, 400, { error: 'bad_deadline' });
+      } else delete doc.deadline;
       await sql`INSERT INTO jobs (id, owner, title, level, status, data)
         VALUES (${id}, ${doc.owner}, ${doc.title.slice(0, 200)}, ${doc.level || null}, ${doc.status || 'open'}, ${j(doc)}::jsonb)
         ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, level = EXCLUDED.level, status = EXCLUDED.status,
@@ -60,8 +64,11 @@ export default async function handler(req, res) {
         return send(res, 200, { ok: true, doc: next });
       } else {
         if (doc.uid !== user) return send(res, 403, { error: 'forbidden' });
-        const [job] = await sql`SELECT id, owner FROM jobs WHERE id = ${String(doc.jobId || '')}`;
+        const [job] = await sql`SELECT id, owner, status, data FROM jobs WHERE id = ${String(doc.jobId || '')}`;
         if (!job) return send(res, 400, { error: 'job_not_found' });
+        // Closed jobs (closed by hand, or past their application deadline) take no new applications.
+        const dl = job.data && job.data.deadline;
+        if (job.status === 'closed' || (dl && Date.now() > Date.parse(dl + 'T23:59:59+05:45'))) return send(res, 409, { error: 'job_closed' });
         const [dup] = await sql`SELECT 1 AS x FROM applications WHERE job_id = ${job.id} AND user_id = ${user}`;
         if (dup) return send(res, 409, { error: 'already_applied' });
         delete doc.test; delete doc.testStart;
