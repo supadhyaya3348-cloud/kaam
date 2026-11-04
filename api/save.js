@@ -29,6 +29,12 @@ export default async function handler(req, res) {
   try {
     if (col === 'profiles') {
       if (id !== user) return send(res, 403, { error: 'forbidden' });
+      // Work-sim results are written only by api/sim.js: keep the stored ones, never the browser's.
+      const [curP] = await sql`SELECT data FROM profiles WHERE id = ${id}`;
+      const serverSims = (curP && curP.data && curP.data.sims) || undefined;
+      if (serverSims) doc.sims = serverSims; else delete doc.sims;
+      const simSamples = new Set(((curP && curP.data && curP.data.portfolio) || []).filter(x => x && x.sim).map(x => x.sim));
+      if (Array.isArray(doc.portfolio)) doc.portfolio = doc.portfolio.map(x => (x && x.sim && !simSamples.has(x.sim)) ? { ...x, sim: undefined } : x);
       await sql`INSERT INTO profiles (id, role, name, district, level, data)
         VALUES (${id}, ${doc.role || null}, ${doc.name || null}, ${doc.district || null}, ${doc.level || null}, ${j(doc)}::jsonb)
         ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, name = EXCLUDED.name, district = EXCLUDED.district,

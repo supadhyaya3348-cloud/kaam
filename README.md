@@ -89,3 +89,9 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 - **Criteria:** the AI learns what separated great hires from the rest and writes 4–6 weighted criteria, which the employer can edit. Without an AI key, a basic word-matching version is used.
 - **Scoring:** each applicant gets a fit score per criterion with evidence and three interview questions, shown on the candidate page.
 - Stored privately for the employer (`private_docs`: `brain-<jobId>`, `aiscores`). Prompts tell the AI never to use names, gender, age, caste, religion, district or family details.
+
+## Work Sims (virtual job experiences)
+- Forage-style "day in the job" simulations: a manager's brief, three hands-on tasks (numbers, spot-the-mistake, sort/classify, write a reply), and a model answer after each task.
+- Definitions and answer keys live only on the server (`api/_sims.js`); `api/sim.js` grades each task once (written tasks use AI when switched on, else a rubric), writes a verified result to the profile and, on a pass, a work sample to the portfolio. Users cannot edit sim results through `/api/save`.
+- Employers can attach a sim to a job. It becomes a hiring stage: Shortlisted → Work sim → Proctored test (the test cannot start until the sim is done). Employers see the score per task on the candidate page.
+- Demo: "A day as junior bookkeeper" (Pokhara Traders) on the bookkeeping demo job, and "A shift in online customer support" (Himal Crafts) on the social media demo job.
