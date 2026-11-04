@@ -304,7 +304,7 @@ function searchJobs(f, list) {
   const words = String(f.q || '').toLowerCase().split(/\s+/).filter(Boolean);
   return (list || openJobs()).filter(j => {
     if (f.type && j.type !== f.type) return false;
-    if (f.lv && j.level !== f.lv) return false; if (f.dist && String(j.district || '').toLowerCase() !== f.dist.toLowerCase()) return false;
+    if (f.lv && !seekerLevel() && j.level !== f.lv) return false; if (f.dist && String(j.district || '').toLowerCase() !== f.dist.toLowerCase()) return false;
     if (!words.length) return true;
     const hay = [j.title, j.company, j.district, j.desc, ...(j.requirements || []), ...((j.extra || []).map(x => x.name)), ...SK.filter(k => (+(j.skills || {})[k] || 0) >= 2).map(k => SKILLS[k].name), j.level && LEVELS[j.level] ? LEVELS[j.level].label : ''].join(' ').toLowerCase();
     return words.every(w => hay.includes(w));
@@ -316,7 +316,7 @@ function searchBar(id, extra) {
     <div class="row" style="gap:10px;align-items:flex-end"><label for="${id}-q" style="flex:1 1 260px">Search jobs<input type="search" id="${id}-q" value="${esc(f.q)}" placeholder="Job title, skill, company or district" autocomplete="off"></label>
       <button class="btn" type="submit" style="--accent:var(--gold)">Search</button></div>
     ${extra ? `<div class="row" style="gap:10px">
-      <label for="${id}-lv" style="flex:0 1 180px">Level<select id="${id}-lv"><option value="">All levels</option>${Object.keys(LEVELS).map(l => `<option value="${l}" ${f.lv === l ? 'selected' : ''}>${esc(LEVELS[l].label)}</option>`).join('')}</select></label>
+      ${seekerLevel() ? '' : `<label for="${id}-lv" style="flex:0 1 180px">Level<select id="${id}-lv"><option value="">All levels</option>${Object.keys(LEVELS).map(l => `<option value="${l}" ${f.lv === l ? 'selected' : ''}>${esc(LEVELS[l].label)}</option>`).join('')}</select></label>`}
       <label for="${id}-dist" style="flex:0 1 180px">District<select id="${id}-dist"><option value="">Anywhere</option>${dists.map(d => `<option ${f.dist === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
       <label for="${id}-type" style="flex:0 1 180px">Job type<select id="${id}-type"><option value="">Any type</option>${JOB_TYPES.map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${f.q || f.lv || f.dist || f.type ? '<button class="btn ghost sm" type="button" data-act="clearSearch">Clear</button>' : ''}</div>` : ''}</form>`;
@@ -385,7 +385,10 @@ const jobList = () => Object.values(S.jobs).filter(j => j.status !== 'closed' &&
 // Application deadline: a job closes automatically at the end of its deadline day (Nepal time).
 const deadlineTs = j => j && /^\d{4}-\d{2}-\d{2}$/.test(j.deadline || '') ? Date.parse(j.deadline + 'T23:59:59+05:45') : null;
 const isClosed = j => !!j && (j.status === 'closed' || (deadlineTs(j) != null && Date.now() > deadlineTs(j)));
-const openJobs = () => jobList().filter(j => !isClosed(j));
+// Jobseekers see only jobs posted for their card's level (Base Camp = fresher, Ridge = mid, Summit = senior).
+const seekerLevel = () => { const p = me(); if (p && p.role === 'seeker') return p.level || S.pick || 'fresher'; return S.route === 'climb' && S.pick ? S.pick : null; };
+const openJobs = () => { const lv = seekerLevel(); return jobList().filter(j => !isClosed(j) && (!lv || (j.level || 'fresher') === lv)); };
+const levelNote = () => { const lv = seekerLevel(); return lv && LEVELS[lv] ? `<div class="banner b-info small">Showing <b>${esc(LEVELS[lv].label)} · ${esc(LEVELS[lv].name)}</b> jobs only, to match your card.</div>` : ''; };
 const fmtDay = d => new Date(d + 'T12:00:00+05:45').toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 const daysLeft = j => deadlineTs(j) == null ? null : Math.round((Date.parse(j.deadline + 'T00:00:00Z') - Date.parse(todayNp() + 'T00:00:00Z')) / 864e5);
 function deadlineTag(j) {
@@ -635,7 +638,7 @@ function vClimb() {
     return `<section class="stack" style="max-width:760px">${flowSteps()}
       <h1 class="t-l">Which job are you looking for?</h1><p class="mute" style="margin:0">Pick a job on CareerCamp, or type the role you want. CareerCamp compares it with your CV.</p>
       <form id="targetForm" class="card stack">
-        ${jobs.length ? `<fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="lbl mute" style="margin-bottom:8px">Jobs on CareerCamp</legend>${jobs.slice(0, 8).map(j => `<label class="q" for="tg-${esc(j.id)}"><input type="radio" name="tg" id="tg-${esc(j.id)}" value="${esc(j.id)}" ${tg.jobId === j.id ? 'checked' : ''}><span><b>${esc(j.title)}</b> <span class="tiny mute">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>${j.demo ? ' <span class="tag warm">Demo</span>' : ''}${(j.requirements || []).length ? `<span class="tiny mute" style="display:block">Requirements: ${esc(j.requirements.join(' · '))}</span>` : ''}</span></label>`).join('')}</fieldset>` : ''}
+        ${jobs.length ? `<fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="lbl mute" style="margin-bottom:8px">Jobs on CareerCamp</legend>${levelNote()}${jobs.slice(0, 8).map(j => `<label class="q" for="tg-${esc(j.id)}"><input type="radio" name="tg" id="tg-${esc(j.id)}" value="${esc(j.id)}" ${tg.jobId === j.id ? 'checked' : ''}><span><b>${esc(j.title)}</b> <span class="tiny mute">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>${j.demo ? ' <span class="tag warm">Demo</span>' : ''}${(j.requirements || []).length ? `<span class="tiny mute" style="display:block">Requirements: ${esc(j.requirements.join(' · '))}</span>` : ''}</span></label>`).join('')}</fieldset>` : ''}
         <label for="tg-custom">Or type a role<input type="text" id="tg-custom" value="${esc(!tg.jobId ? tg.title || '' : '')}" placeholder="e.g. Social media assistant"></label>
         <p class="small" id="tgErr" role="alert" style="margin:0;color:var(--warn)"></p>
         <div class="row"><button class="btn" type="submit" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span> Analysing your CV…' : 'Analyse my CV'}</button></div>
@@ -799,6 +802,7 @@ function vJobs() {
   const open = S.selJob && S.jobs[S.selJob];
   return `<section class="stack"><h1 class="t-l">${esc(t('Jobs'))}</h1>
     ${searchBar('js', true)}
+    ${levelNote()}
     <div class="small mute" role="status">${js.length} job${js.length === 1 ? '' : 's'}${f.q ? ` for "${esc(f.q)}"` : ''}, best match first</div>
     ${open ? jobDetail(open, p) : ''}
     <div class="card list">${js.length ? js.map(j => jobRow(j, p, true)).join('') : '<div class="empty">No jobs match. Clear a filter, or check back when employers post new jobs.</div>'}</div></section>`;
