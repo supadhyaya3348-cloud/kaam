@@ -74,3 +74,9 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 - Demo jobs `demo-bookkeeping` and `demo-social-media` have requirements. Applying shortlists you straight away so the whole journey can be shown with one account.
 - Demo mentors `demo-mentor-asha` and `demo-mentor-rabin` accept requests instantly.
 - Two demo CVs on the CV upload step.
+
+## Offline
+- `sw.js` (service worker) keeps the app page, fonts and libraries on the device, so Kaam opens with no internet. It never caches `/api`.
+- After each sync, the signed-in user's roadmap, courses, jobs and applications are saved in the browser. Offline, the app shows them with an "offline" banner.
+- Roadmap steps and course lessons ticked offline are queued and sent automatically when the connection returns. Other actions (apply, tests, posting) need a connection.
+- Logging out removes the saved copy from the device.

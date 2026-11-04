@@ -322,6 +322,11 @@ const analysis = () => S.priv.analysis || null;
 // ---------- storage ----------
 const store = col => ({ profiles:S.profiles, jobs:S.jobs, apps:S.apps, mentorships:S.ments }[col]);
 async function save(col, id, data, merge) {
+  if (S.offline) {
+    // Course ticks are saved on the device and synced later; everything else needs a connection.
+    if (col === 'profiles' && id === S.uid && Object.keys(data).every(k => k === 'lessons')) { S.profiles[id] = { ...(S.profiles[id] || {}), ...data }; queueOffline('profile', data); render(); return true; }
+    toast('You are offline. Connect to the internet to do this.'); return false;
+  }
   if (S.api && !S.uid) { needLogin(); return false; }
   if (S.api) {
     const doc = merge ? { ...(store(col)[id] || {}), ...data } : data;
@@ -331,6 +336,10 @@ async function save(col, id, data, merge) {
   const st = store(col); st[id] = merge ? { ...(st[id] || {}), ...data, id } : { ...data, id }; persistLocal(); render(); return true;
 }
 async function savePriv(docId, data) {
+  if (S.offline) {
+    if (docId === 'analysis') { S.priv.analysis = data; queueOffline('analysis', data); render(); return true; }
+    toast('You are offline. Connect to the internet to do this.'); return false;
+  }
   if (S.api && !S.uid) { needLogin(); return false; }
   if (S.api) { try { const r = await api('/api/save', { col: 'private', id: docId, data }); S.priv[docId] = r.doc; render(); return true; } catch (e) { toast('Could not save. Check your connection and try again.'); return false; } }
   S.priv[docId] = data; persistLocal(); render(); return true;
@@ -935,7 +944,7 @@ function render() {
   else if (role === 'employer' && seekerRoutes.includes(r)) r = 'employer';
   else if (role === 'seeker' && empRoutes.includes(r)) r = 'dashboard';
   const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'hire-mentors':vHireMentors, 'job-review':vJobReview, candidate:vCandidate, test:vTest, practice:vPractice, alerts:vAlerts, login:vLogin, logout:vLogout };
-  const banner = '';
+  const banner = S.offline ? `<div class="banner b-warn small" role="status" style="margin-bottom:16px"><b>You are offline.</b> ${S.uid ? `Showing your roadmap, courses and applications saved ${S.snapAt ? 'on ' + new Date(S.snapAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'on this device'}. Steps you tick now are kept and sync when you are back online.` : 'Connect to the internet once and log in. After that, your roadmap also opens offline.'}</div>` : '';
   $('#app').innerHTML = banner + (views[r] || vHome)();
   $('#nav').innerHTML = navHTML();
   $('#acct').innerHTML = acctHTML();
@@ -1038,6 +1047,7 @@ document.addEventListener('click', async e => {
   if (act === 'authMode') { S.authMode = el.dataset.m === 'signup' ? 'signup' : 'login'; const em = $('#a-email'); if (em) S.authEmail = em.value; if (S.route !== 'login') go('login'); else render(); return; }
   if (act === 'logout') {
     try { await api('/api/auth', { action: 'logout' }); } catch (x) {}
+    try { localStorage.removeItem(SNAP); localStorage.removeItem(PEND); } catch (x) {}
     S.uid = null; S.email = null; S.priv = {}; S.chat = []; S.quiz = null; S.target = null; S.cvDraft = ''; S.cvName = ''; S.cvMsg = ''; S.draft = null; S.authMode = 'login';
     toast('Logged out.');
     return go('logout');
@@ -1307,8 +1317,51 @@ function loadLocal() {
   persistLocal();
 }
 
+// ---------- offline ----------
+// After each successful sync, the signed-in user's data (roadmap, courses, jobs, applications) is saved on the device,
+// so the roadmap opens with no internet. Ticks made offline are queued and sent when the connection returns.
+const SNAP = 'kaam-snap', PEND = 'kaam-pending';
+function saveSnap() {
+  if (!S.uid || !S.api || S.offline) return;
+  const mine = Object.fromEntries(Object.entries(S.apps).filter(([, a]) => a.uid === S.uid || (S.jobs[a.jobId] || {}).owner === S.uid).map(([k, a]) => { const { cv, ...rest } = a; return [k, rest]; }));
+  const snap = { user: { id: S.uid, email: S.email }, at: Date.now(), profiles: S.profiles, jobs: S.jobs, apps: mine, ments: Object.fromEntries(mySessions().map(m => [m.id, m])), priv: S.priv.analysis ? { analysis: S.priv.analysis } : {} };
+  try { localStorage.setItem(SNAP, JSON.stringify(snap)); } catch (e) {}
+}
+function loadSnap() { try { return JSON.parse(localStorage.getItem(SNAP)); } catch (e) { return null; } }
+function queueOffline(kind, data) {
+  let q = {}; try { q = JSON.parse(localStorage.getItem(PEND)) || {}; } catch (e) {}
+  q.uid = S.uid; if (kind === 'profile') q.profile = { ...(q.profile || {}), ...data }; else q[kind] = data;
+  try { localStorage.setItem(PEND, JSON.stringify(q)); } catch (e) {}
+  const snap = loadSnap(); if (snap && snap.user.id === S.uid) { if (kind === 'analysis') snap.priv.analysis = data; else snap.profiles[S.uid] = { ...(snap.profiles[S.uid] || {}), ...data }; try { localStorage.setItem(SNAP, JSON.stringify(snap)); } catch (e) {} }
+}
+function useSnap(snap) {
+  S.uid = snap.user.id; S.email = snap.user.email; S.profiles = snap.profiles || {}; S.jobs = snap.jobs || {}; S.apps = snap.apps || {}; S.ments = snap.ments || {}; S.priv = snap.priv || {}; S.snapAt = snap.at;
+}
+function goOffline() { if (S.offline || !S.api) return; S.offline = true; S.snapAt = S.snapAt || (loadSnap() || {}).at; render(); }
+async function reconnect() {
+  if (S.reconnecting) return; S.reconnecting = true;
+  try {
+    const a = await api('/api/auth'); const wasUid = S.uid;
+    S.offline = false; S.uid = a.user ? a.user.id : null; S.email = a.user ? a.user.email : null;
+    let q = null; try { q = JSON.parse(localStorage.getItem(PEND)); } catch (e) {}
+    let synced = false;
+    if (q && S.uid && q.uid === S.uid) {
+      if (q.analysis) { try { await api('/api/save', { col: 'private', id: 'analysis', data: q.analysis }); synced = true; } catch (e) {} }
+      if (q.profile) { try { await pull(); const cur = S.profiles[S.uid] || {}; await api('/api/save', { col: 'profiles', id: S.uid, data: { ...cur, ...q.profile } }); synced = true; } catch (e) {} }
+      try { localStorage.removeItem(PEND); } catch (e) {}
+    }
+    await pull();
+    if (wasUid && !S.uid) toast('You are back online. Please log in again.'); else toast(synced ? 'Back online. Your offline progress is synced.' : 'Back online.');
+    render();
+  } catch (e) { S.offline = true; }
+  S.reconnecting = false;
+}
+window.addEventListener('offline', goOffline);
+window.addEventListener('online', () => { if (S.offline) reconnect(); });
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+
 // ---------- boot ----------
-async function pull() { const d = await api('/api/state'); S.profiles = d.profiles || {}; S.jobs = d.jobs || {}; S.apps = d.apps || {}; S.ments = d.mentorships || {}; S.priv = d.priv || {}; }
+async function pull() { const d = await api('/api/state'); S.profiles = d.profiles || {}; S.jobs = d.jobs || {}; S.apps = d.apps || {}; S.ments = d.mentorships || {}; S.priv = d.priv || {}; saveSnap(); }
 S.route = (location.hash || '#home').slice(1) || 'home';
 render();
 (async () => {
@@ -1317,18 +1370,27 @@ render();
     S.uid = a.user ? a.user.id : null; S.email = a.user ? a.user.email : null;
     await pull(); S.api = true; S.local = false;
   } catch (e) {
+    const snap = loadSnap();
+    if (snap && snap.user) {
+      // No connection, but this device has the last signed-in user's roadmap saved: open it offline.
+      useSnap(snap); S.api = true; S.offline = true; S.local = false;
+    } else if (navigator.onLine === false) {
+      S.api = true; S.offline = true; S.uid = null;
+    } else {
     // Server unreachable: fall back to a device-only anonymous account.
     S.api = false; S.local = true;
     try { S.uid = localStorage.getItem('kaam-uid'); } catch (x) {}
     if (!S.uid || !/^[A-Za-z0-9_-]{8,64}$/.test(S.uid)) { S.uid = 'u' + (window.crypto && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36)); try { localStorage.setItem('kaam-uid', S.uid); } catch (x) {} }
     loadLocal();
+    }
   }
   if (S.api) {
     try { const h = await api('/api/ai'); if (h.enabled) S.sample = makeSample(); } catch (e) {}
     setInterval(async () => {
       if (document.hidden || S.busy || (S.test && S.test.active)) return;
       const a = document.activeElement; const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-      try { await pull(); if (!typing) render(); } catch (e) {}
+      if (S.offline) { if (navigator.onLine !== false) await reconnect(); return; }
+      try { await pull(); if (!typing) render(); } catch (e) { if (e instanceof TypeError) goOffline(); }
     }, 6000);
   }
   render();
