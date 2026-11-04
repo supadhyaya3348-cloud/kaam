@@ -62,12 +62,15 @@ can accept or decline a session.
 - Saving anything, private CV data and AI calls all require a logged-in session; the server decides who you are from the cookie, not from the browser.
 
 ## Hiring pipeline
-Applied → Shortlisted → Assessment (mock test) → Interview → Hired, or "Not now" at any stage.
-- The employer can only move an application one allowed step at a time (`api/save.js`).
-- The mock test (`api/test.js`, questions in `api/_mock.js`) is picked from the job's skill weights. Answers stay on the server, each candidate gets one try, and 60+ moves them to Interview automatically. Blind hiring reveals the name only at Interview.
+Applied → Shortlisted → Assessment (proctored mock test) → Interview → Hired, or "Not now" at any stage.
+- Employers can add their own skills (e.g. Tally, Canva) and requirements to a job. Both are checked against each applicant's CV.
+- Applying shares the jobseeker's CV with that job's employer only (`api/state.js` strips it for everyone else). With blind hiring, name, email and phone are hidden in the CV until the interview.
+- **Review** shows verified skill scores, requirements vs. CV, the CV, work samples and the assessment result.
+- When shortlisted, the jobseeker gets a notification, can take unlimited practice tests, and starts the real assessment when ready ("I'm ready").
+- The real assessment (`api/test.js`, questions in `api/_mock.js`): 10-minute timer kept by the server, full screen, and tab or app switches, full-screen exits and copy/paste attempts are recorded and shown to the employer. One try, graded on the server; 60+ moves to Interview.
 - Interviews use a free Jitsi room shared by both sides.
 
 ## Demos
-- Demo jobs `demo-bookkeeping` and `demo-social-media` have requirements. Applying sends you straight to the mock test so the whole journey can be shown with one account.
+- Demo jobs `demo-bookkeeping` and `demo-social-media` have requirements. Applying shortlists you straight away so the whole journey can be shown with one account.
 - Demo mentors `demo-mentor-asha` and `demo-mentor-rabin` accept requests instantly.
 - Two demo CVs on the CV upload step.

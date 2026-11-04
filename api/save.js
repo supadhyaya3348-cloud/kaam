@@ -1,11 +1,12 @@
 import { sql, userOf, send, readBody } from './_lib.js';
 
 const MAX_BYTES = 200_000;
-// Hiring pipeline: applied -> shortlisted -> assessment (mock test) -> interview -> selected, or rejected at any stage.
-// "interview" is only reached by passing the mock test (see api/test.js), never set by hand.
+// Hiring pipeline: applied -> shortlisted -> assessment (proctored mock test) -> interview -> selected, or rejected.
+// The employer shortlists. The candidate starts the assessment when ready, and passing it moves them to interview
+// (both handled in api/test.js, never set by hand here).
 const NEXT = {
   applied: ['shortlisted', 'rejected'],
-  shortlisted: ['assessment', 'rejected'],
+  shortlisted: ['rejected'],
   assessment: ['rejected'],
   interview: ['selected', 'rejected'],
   selected: [],
@@ -47,19 +48,21 @@ export default async function handler(req, res) {
         // Only the employer who owns the job can move an application, one allowed step at a time.
         if (user !== cur.owner) return send(res, 403, { error: 'forbidden' });
         if (!(NEXT[cur.status] || []).includes(doc.status)) return send(res, 400, { error: 'bad_status' });
-        doc.uid = cur.user_id; doc.jobId = cur.job_id;
-        // The test result can only come from api/test.js.
-        if (cur.data && cur.data.test) doc.test = cur.data.test; else delete doc.test;
-        await sql`UPDATE applications SET status = ${doc.status}, data = ${j(doc)}::jsonb, updated_at = now() WHERE id = ${id}`;
+        // The employer only changes the stage; the CV snapshot and test result are kept exactly as stored.
+        const next = { ...(cur.data || {}), id, uid: cur.user_id, jobId: cur.job_id, status: doc.status, [doc.status + 'At']: Date.now() };
+        await sql`UPDATE applications SET status = ${next.status}, data = ${j(next)}::jsonb, updated_at = now() WHERE id = ${id}`;
+        return send(res, 200, { ok: true, doc: next });
       } else {
         if (doc.uid !== user) return send(res, 403, { error: 'forbidden' });
         const [job] = await sql`SELECT id, owner FROM jobs WHERE id = ${String(doc.jobId || '')}`;
         if (!job) return send(res, 400, { error: 'job_not_found' });
         const [dup] = await sql`SELECT 1 AS x FROM applications WHERE job_id = ${job.id} AND user_id = ${user}`;
         if (dup) return send(res, 409, { error: 'already_applied' });
-        delete doc.test;
-        // Demo jobs (owner "sample") have no real employer, so they send every applicant straight to the mock test.
-        doc.status = job.owner === 'sample' ? 'assessment' : 'applied';
+        delete doc.test; delete doc.testStart;
+        // The applicant's CV is shared with this job's employer only (see api/state.js).
+        if (typeof doc.cv !== 'string') delete doc.cv; else doc.cv = doc.cv.slice(0, 12000);
+        // Demo jobs (owner "sample") have no real employer, so every applicant is shortlisted straight away.
+        doc.status = job.owner === 'sample' ? 'shortlisted' : 'applied';
         if (job.owner === 'sample') doc.demo = true;
         await sql`INSERT INTO applications (id, job_id, user_id, status, data) VALUES (${id}, ${job.id}, ${user}, ${doc.status}, ${j(doc)}::jsonb)`;
       }
