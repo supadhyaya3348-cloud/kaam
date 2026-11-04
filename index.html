@@ -7,7 +7,7 @@
 <title>CareerCamp</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Mukta:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Kalam:wght@400;700&family=Mukta:wght@400;600;800&display=swap">
 <style>
 /* CareerCamp: snowy Himalayan blue. Deep-blue top bar with a prayer-flag strip, icy white pages, white cards,
    Nepal-flag crimson and marigold accents, tier cards framed like summit flags, tarot-style level picker. */
@@ -16,12 +16,12 @@
   --text:#0D2A47; --mute:#4F6884; --track:#E3EEF8; --ink:#FFFFFF;
   --base:#0F8A6A; --ridge:#1F5FAF; --summit:#C1272D; --gold:#B85A0B; --pink:#C1272D; --warn:#9A3412; --warnbg:#FFF1E6;
   --night:#0B2E52; --night2:#123F6E; --snow:#FFFFFF; --ice:#7FB6EA;
-  --f-display:'Baloo 2','Mukta',system-ui,sans-serif; --f-label:'Baloo 2','Mukta',system-ui,sans-serif; --f-body:'Mukta','Noto Sans Devanagari',system-ui,sans-serif;
+  --f-display:'Baloo 2','Mukta',system-ui,sans-serif; --f-label:'Baloo 2','Mukta',system-ui,sans-serif; --f-body:'Mukta','Noto Sans Devanagari',system-ui,sans-serif; --f-hand:'Kalam','Mukta',cursive;
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text)}
-body{background:linear-gradient(180deg,#DCEAF7 0,#EEF4FA 360px) no-repeat,var(--bg)}
+body{background:radial-gradient(rgba(31,95,175,.09) 1.2px,transparent 1.4px) 0 0/22px 22px,linear-gradient(180deg,#DCEAF7 0,#EEF4FA 360px) no-repeat,var(--bg)}
 body{font:400 16px/1.55 var(--f-body);margin:0}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--night)}
 a{color:var(--ridge)}
@@ -55,7 +55,24 @@ a.pill{text-decoration:none;display:inline-block}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;padding:4px;gap:4px}
 .seg button{flex:1;min-height:40px;border:0;border-radius:7px;background:none;color:var(--mute);font-weight:800;cursor:pointer}
 .seg button[aria-selected="true"]{background:var(--ridge);color:#fff}
-main{padding-block:28px 64px}
+main{padding-block:28px 40px}
+.hand{font-family:var(--f-hand)}
+.kicker{display:inline-block;font:700 21px/1.2 var(--f-hand);color:var(--summit);transform:rotate(-2deg);transform-origin:left}
+main h1.t-l{width:fit-content;max-width:100%;padding:0 6px;margin-left:-6px;background:linear-gradient(transparent 62%,rgba(242,183,5,.38) 62%,rgba(242,183,5,.38) 90%,transparent 90%)}
+.swoosh{display:block;width:min(340px,70%);height:18px;margin-top:-6px}
+.tagline{font:700 24px var(--f-hand);color:var(--ridge)}
+.btn{box-shadow:0 3px 0 rgba(11,46,82,.22);transition:transform .12s,box-shadow .12s}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 0 rgba(11,46,82,.22)}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 rgba(11,46,82,.22)}
+.btn.ghost{box-shadow:none;background:rgba(255,255,255,.6)}
+.logo:hover .peak{animation:peakbob .5s ease}
+@keyframes peakbob{50%{transform:translateY(-.18em) rotate(-4deg)}}
+body{min-height:100vh;display:flex;flex-direction:column}
+#app{flex:1 0 auto;width:100%}
+.foot{margin-top:24px;color:var(--mute);text-align:center}
+.foot svg{display:block;width:100%;height:auto;max-height:150px}
+.foot .made{font:700 18px var(--f-hand);color:var(--ridge);padding:10px 16px 18px;background:#2C4A7C;color:#DCEAF8;margin:0}
+body.exam .foot{display:none}
 h1,h2,h3{margin:0;text-wrap:balance}
 .lbl{font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase}
 .t-xl{font:800 clamp(36px,6vw,64px)/1.02 var(--f-display);color:var(--night)}
@@ -100,8 +117,14 @@ textarea{min-height:110px;resize:vertical}
 .heroart svg{display:block;width:100%;height:100%}
 .heroart .cap{position:absolute;left:18px;right:18px;bottom:18px;background:rgba(255,255,255,.92);border:2px solid var(--ridge);border-radius:10px;padding:10px;text-align:center;color:var(--night)}
 .steps{counter-reset:s;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));padding:0;margin:0;list-style:none}
-.steps li{counter-increment:s;border-top:2px solid var(--line2);padding-top:10px}
-.steps li::before{content:counter(s,decimal-leading-zero);font:700 15px var(--f-label);color:var(--gold);letter-spacing:.08em;display:block}
+.steps li{counter-increment:s;position:relative;background:#FFF6C2;padding:18px 18px 20px;border-radius:4px;box-shadow:0 12px 20px -14px rgba(11,46,82,.5);transform:rotate(-1.2deg);transition:transform .2s}
+.steps li:nth-child(2n){transform:rotate(1deg);background:#DDEEFF}
+.steps li:nth-child(3n){background:#FFE1E1}
+.steps li:nth-child(5n){background:#DDF3E6}
+.steps li:hover{transform:rotate(0) translateY(-3px)}
+.steps li::after{content:"";position:absolute;top:-9px;left:50%;width:72px;height:18px;margin-left:-36px;background:rgba(127,182,234,.55);transform:rotate(-3deg)}
+.steps li:nth-child(2n)::after{background:rgba(242,183,5,.5);transform:rotate(3deg)}
+.steps li::before{content:counter(s);font:700 30px/1 var(--f-hand);color:var(--summit);display:block;margin-bottom:4px}
 .flowsteps{display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0}
 .flowsteps li{font:700 14px var(--f-label);letter-spacing:.06em;padding:4px 12px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
 .flowsteps li[aria-current="step"]{background:var(--ridge);color:var(--ink);border-color:var(--ridge)}
@@ -154,7 +177,7 @@ table.fair{width:100%;border-collapse:collapse;font-size:14px;font-variant-numer
 table.fair th,table.fair td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .scroll{overflow-x:auto}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--ink);padding:10px 16px;border-radius:10px;font-weight:800;z-index:20;max-width:calc(100% - 32px)}
-.empty{border:1.5px dashed var(--line2);border-radius:12px;padding:18px;color:var(--mute)}
+.empty{border:1.5px dashed var(--line2);border-radius:12px;padding:18px;color:var(--mute);font-family:var(--f-hand);font-size:17px;background:rgba(255,255,255,.5)}
 .kv{font-variant-numeric:tabular-nums}
 .sr{position:absolute;left:-9999px}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-3px}
@@ -174,6 +197,7 @@ table.fair th,table.fair td{text-align:left;padding:6px 8px;border-bottom:1px so
   </div>
 </div></header>
 <main class="wrap" id="app" aria-live="polite"></main>
+<footer class="foot"><svg viewBox="0 0 1920 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g fill="#BFD3E8"><rect x="0" y="205" width="1920" height="55"/><rect x="60" y="170" width="90" height="90"/><rect x="170" y="185" width="70" height="75"/><rect x="560" y="175" width="80" height="85"/><rect x="1110" y="180" width="90" height="80"/><rect x="1380" y="175" width="90" height="85"/><rect x="1500" y="160" width="70" height="100"/><rect x="1760" y="170" width="80" height="90"/></g><g fill="#7FA6CF"><rect x="385" y="190" width="70" height="70"/><polygon points="330,195 510,195 470,165 370,165"/><rect x="395" y="145" width="50" height="25"/><polygon points="350,150 490,150 458,122 382,122"/><rect x="402" y="104" width="36" height="22"/><polygon points="368,108 472,108 446,84 394,84"/><polygon points="420,48 412,86 428,86"/><rect x="820" y="230" width="280" height="30"/><path d="M840 232 A120 95 0 0 1 1080 232 Z"/><rect x="935" y="118" width="50" height="22"/><polygon points="960,30 932,120 988,120"/><polygon points="1245,260 1245,165 1262,120 1290,62 1318,120 1335,165 1335,260"/><circle cx="1290" cy="58" r="9"/><rect x="1615" y="205" width="50" height="55"/><polygon points="1580,208 1700,208 1672,186 1608,186"/><rect x="1622" y="168" width="36" height="20"/><polygon points="1595,172 1685,172 1662,154 1618,154"/><polygon points="1640,118 1634,156 1646,156"/></g><g stroke="#7FA6CF" stroke-width="3"><line x1="960" y1="48" x2="770" y2="232"/><line x1="960" y1="48" x2="1150" y2="232"/></g><path d="M600 60 Q760 110 920 70" stroke="#7FA6CF" stroke-width="2" fill="none"/><g><polygon points="630,70 650,76 648,100 628,95" fill="#1E5AA8"/><polygon points="668,80 688,85 687,109 667,105" fill="#FFFFFF"/><polygon points="706,88 726,91 726,115 706,113" fill="#C8102E"/><polygon points="744,91 764,92 765,116 745,116" fill="#1F8A4C"/><polygon points="782,92 802,90 804,114 784,116" fill="#F2B705"/><polygon points="820,88 840,85 843,109 823,112" fill="#1E5AA8"/><polygon points="858,82 878,78 882,102 862,106" fill="#FFFFFF"/></g><rect x="0" y="252" width="1920" height="8" fill="#2C4A7C"/></svg><p class="made">Made with ♥ in Nepal by team error 303 · हिमाल, पहाड, तराई, सबैका लागि</p></footer>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="/ne.js"></script>
@@ -471,13 +495,14 @@ function vHome() {
   const p = me();
   return `<section class="hero">
     <div class="stack" style="gap:18px">
-      <div class="lbl" style="color:var(--pink)">Hiring on proven skills, made in Nepal</div>
-      <h1 class="t-xl">${esc(t('Find your tier. Climb to work.'))}</h1>
+      <span class="kicker">Hiring on proven skills, made in Nepal ✎</span>
+      <div><h1 class="t-xl">${esc(t('Find your tier. Climb to work.'))}</h1><svg class="swoosh" viewBox="0 0 720 30" preserveAspectRatio="none" aria-hidden="true"><path d="M8 22 C120 6 300 30 520 10 C600 4 680 14 712 18" stroke="#F2B705" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
       <p class="mute" style="font-size:18px;max-width:34em;margin:0">Pick your card, upload your CV and choose the job you want. CareerCamp shows what is missing, gives you a roadmap with courses, and connects you to mentors on video. Employers see your skills, not your name.</p>
       <div class="row">
         <button class="btn" type="button" data-act="startClimb" style="--accent:var(--text)">${esc(t('Start my climb'))}</button>
         <button class="btn ghost" type="button" data-act="startHire">${esc(t('I\'m hiring'))}</button>
       </div>
+      <div class="tagline">सीप देखाऊ, काम पाऊ। <span class="mute" style="font-size:18px">(Show your skill. Get the job.)</span></div>
       ${p && p.role ? `<div class="banner b-info"><span>Welcome back, ${esc(p.name)}.</span> <a href="#${p.role === 'employer' ? 'employer' : 'dashboard'}">Open your dashboard</a></div>` : ''}
     </div>
     <div class="heroart" role="img" aria-label="A Himalayan night scene with a tent at base camp">

@@ -349,6 +349,7 @@ window.KAAM_NE = (() => {
     'Shown clearly in their CV or work.': 'उनको CV वा काममा स्पष्ट देखिन्छ।', 'Your great hires talked about this; weaker applicants did not.': 'तपाईंका उत्कृष्ट कर्मचारीले यसबारे लेखेका थिए; कमजोर आवेदकले लेखेनन्।',
     'Verified score of 60 or more on CareerCamp.': 'CareerCamp मा ६० वा बढी प्रमाणित अंक।', 'Criterion name': 'मापदण्डको नाम', 'Weight': 'महत्त्व', 'What strong evidence looks like': 'बलियो प्रमाण कस्तो देखिन्छ', 'Remove criterion': 'मापदण्ड हटाउनुहोस्',
     'Job type': 'जागिरको प्रकार', 'Any type': 'जुनसुकै प्रकार', 'Full-time': 'पूर्णकालीन', 'Part-time': 'आंशिक समय', 'Fair hiring': 'निष्पक्ष भर्ना',
+    'Hiring on proven skills, made in Nepal ✎': 'प्रमाणित सीपमा भर्ना, नेपालमै बनेको ✎', '(Show your skill. Get the job.)': '', 'Made with ♥ in Nepal by team error 303 · हिमाल, पहाड, तराई, सबैका लागि': 'टिम error 303 द्वारा नेपालमा ♥ सहित बनाइएको · हिमाल, पहाड, तराई, सबैका लागि',
     'Candidate': 'उम्मेदवार', 'Climber': 'आरोही'
   };
 
