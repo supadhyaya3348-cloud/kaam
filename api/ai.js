@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const model = (tier === 'quick' ? process.env.ANTHROPIC_MODEL_QUICK : process.env.ANTHROPIC_MODEL) || (tier === 'quick' ? 'claude-haiku-5-5' : 'claude-sonnet-5-5');
   const system = json
     ? 'You return only valid JSON that matches the requested shape. No prose, no markdown, no code fences.'
-    : 'You are the AI Manager inside Kaam, a job platform in Nepal. Be brief, kind and practical.';
+    : 'You are the AI Manager inside CareerCamp, a job platform in Nepal. Be brief, kind and practical.';
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

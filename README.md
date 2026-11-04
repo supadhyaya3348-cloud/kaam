@@ -1,4 +1,4 @@
-# Kaam
+# CareerCamp (formerly Kaam)
 
 Hiring on proven skills in Nepal. Jobseekers choose a card (Fresher, Mid-level or Senior), upload a CV, get a
 roadmap of what is missing, take skill checks, meet mentors on video and apply blind. Employers post jobs for a
