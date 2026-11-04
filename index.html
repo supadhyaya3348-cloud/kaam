@@ -1002,7 +1002,7 @@ function vEmployer() {
       <div class="row">${[['Open jobs', mine.filter(j => !isClosed(j)).length], ['Applicants', allApps.length], ['Shortlisted', count('shortlisted') + count('assessment')], ['Interview', count('interview')], ['Hired', count('selected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
     <div class="stack">
       <div class="card stack"><div class="row between"><div class="t-m">YOUR JOBS</div><a class="btn sm" style="--accent:var(--gold)" href="#post">${esc(t('Post a job'))}</a></div>
-        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''} ${deadlineTag(j)}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants${j.deadline ? ` · <span>Deadline ${esc(fmtDay(j.deadline))}</span>` : ''}</div></div><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
+        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''} ${deadlineTag(j)}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants${j.deadline ? ` · <span>Deadline ${esc(fmtDay(j.deadline))}</span>` : ''}</div></div><span class="row" style="gap:8px"><button class="btn ghost sm" type="button" data-act="pastApps" data-id="${esc(j.id)}">Past applicants${(brainFor(j.id).examples || []).length ? ' · ' + brainFor(j.id).examples.length : ''}</button><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></span></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
     </div>
   </section>`;
 }
@@ -1122,6 +1122,8 @@ function vPost() {
 // then scores new applicants against those criteria. Stored privately for the employer (private_docs).
 // It never uses names, gender, district or age.
 const OUTCOMES = [['great', 'Great hire'], ['okay', 'Okay'], ['nofit', 'Not a fit']];
+const brainJobs = () => jobList().filter(j => j.owner === S.uid || j.sample);
+const brainJid = () => { const m = brainJobs(); return S.brainJob && m.some(j => j.id === S.brainJob) ? S.brainJob : (m[0] || {}).id; };
 const brainFor = id => S.priv['brain-' + id] || { examples: [], criteria: [] };
 const aiScores = () => S.priv.aiscores || {};
 async function saveBrain(jobId, patch) { if (!jobId) return false; const cur = brainFor(jobId); return savePriv('brain-' + jobId, { ...cur, ...patch, at: Date.now() }); }
@@ -1199,8 +1201,8 @@ function fitPanel(a, j) {
     <div><button class="btn sm" type="button" data-act="scoreApp" data-id="${esc(a.id)}" style="--accent:var(--gold)" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span> Scoring…' : r ? 'Score again' : 'Score with my criteria'}</button></div></div>`;
 }
 function vBrain() {
-  const mine = jobList().filter(j => j.owner === S.uid);
-  const jid = S.brainJob && mine.some(j => j.id === S.brainJob) ? S.brainJob : (mine[0] || {}).id; const j = jid && S.jobs[jid];
+  const mine = brainJobs();
+  const jid = brainJid(); const j = jid && S.jobs[jid]; const E = S.exEdit && S.exEdit.jid === jid ? S.exEdit : null;
   const head = `<div class="stack" style="gap:6px"><div class="lbl" style="color:var(--gold)">For employers</div><h1 class="t-l">AI Hiring Manager</h1>
     <p class="mute" style="margin:0">Teach it with past applicants' work and how they turned out. It learns what your great hires had in common, turns that into hiring criteria, and scores new applicants against them.</p>
     <div class="row" style="gap:8px"><span class="tag ${S.sample ? 'base' : 'warm'}">${S.sample ? 'AI on' : 'Basic mode: add an AI key to switch on full AI'}</span><span class="tiny mute">Never uses names, gender, district or age.</span></div></div>`;
@@ -1213,16 +1215,17 @@ function vBrain() {
     <div class="grid g2" style="align-items:start">
       <div class="card stack"><div class="t-m">1. TEACH IT WITH PAST APPLICANTS</div>
         <div class="small mute">Paste or upload a past applicant's CV or work, and say how they turned out. Hide names first if you can; CareerCamp also removes emails and phone numbers.</div>
-        <div class="list">${ex.length ? ex.map((e, i) => `<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><b class="small">${esc(e.title || 'Past applicant ' + (i + 1))}</b> <span class="tag ${e.outcome === 'great' ? 'base' : e.outcome === 'nofit' ? 'warm' : ''}">${esc((OUTCOMES.find(o => o[0] === e.outcome) || [, ''])[1])}</span><div class="tiny mute" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">${esc(String(e.text || '').slice(0, 120))}</div></div><button class="btn ghost sm" type="button" data-act="rmExample" data-i="${i}">Remove</button></div>`).join('') : '<div class="empty small">No examples yet. Add 3 to 10 for good criteria.</div>'}</div>
+        <div class="list">${ex.length ? ex.map((e, i) => `<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><b class="small">${esc(e.title || 'Past applicant ' + (i + 1))}</b> <span class="tag ${e.outcome === 'great' ? 'base' : e.outcome === 'nofit' ? 'warm' : ''}">${esc((OUTCOMES.find(o => o[0] === e.outcome) || [, ''])[1])}</span><div class="tiny mute" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">${esc(String(e.text || '').slice(0, 120))}</div></div><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost sm" type="button" data-act="editExample" data-i="${i}" ${E && E.i === i ? 'aria-pressed="true" style="border-color:var(--gold);color:var(--gold)"' : ''}>${E && E.i === i ? 'Editing' : 'Edit'}</button><button class="btn ghost sm" type="button" data-act="rmExample" data-i="${i}">Remove</button></span></div>`).join('') : '<div class="empty small">No examples yet. Add 3 to 10 for good criteria.</div>'}</div>
         ${past.length ? `<div class="row"><button class="btn ghost sm" type="button" data-act="importPast" style="border-color:var(--gold);color:var(--gold)">Import ${past.length} past CareerCamp applicant${past.length === 1 ? '' : 's'}</button><span class="tiny mute">Hired count as Great hire, not selected as Not a fit.</span></div>` : ''}
         <form id="exForm" class="stack" style="border-top:1px solid var(--line);padding-top:12px">
-          <label for="ex-title">Label (optional)<input type="text" id="ex-title" placeholder="e.g. Accountant hired in 2025" maxlength="60"></label>
-          <fieldset class="row" style="border:0;padding:0;margin:0;gap:8px"><legend class="small" style="font-weight:600;margin-bottom:6px">How did they turn out?</legend>${OUTCOMES.map(([v, l], i) => `<label class="q" for="ex-o-${v}" style="flex:1 1 120px;padding:8px 12px"><input type="radio" name="exo" id="ex-o-${v}" value="${v}" ${i === 0 ? 'checked' : ''}><span>${esc(l)}</span></label>`).join('')}</fieldset>
+          ${E ? `<div class="banner b-info small">Editing past applicant: <b>${esc(E.title || 'Past applicant ' + (E.i + 1))}</b></div>` : ''}
+          <label for="ex-title">Label (optional)<input type="text" id="ex-title" placeholder="e.g. Accountant hired in 2025" maxlength="60" value="${esc(E ? E.title || '' : '')}"></label>
+          <fieldset class="row" style="border:0;padding:0;margin:0;gap:8px"><legend class="small" style="font-weight:600;margin-bottom:6px">How did they turn out?</legend>${OUTCOMES.map(([v, l], i) => `<label class="q" for="ex-o-${v}" style="flex:1 1 120px;padding:8px 12px"><input type="radio" name="exo" id="ex-o-${v}" value="${v}" ${(E ? E.outcome === v : i === 0) ? 'checked' : ''}><span>${esc(l)}</span></label>`).join('')}</fieldset>
           <label for="ex-text">Their CV or work<textarea id="ex-text" style="min-height:120px" placeholder="Paste a CV, a work sample, or a summary of what they did">${esc(S.exDraft || '')}</textarea></label>
           <div class="row"><label for="exFile" class="btn ghost sm" style="display:inline-flex;flex-direction:row">Upload PDF, Word or .txt<input type="file" id="exFile" accept=".pdf,.docx,.txt" class="sr"></label>${S.exMsg ? `<span class="tiny" role="status">${S.exMsg}</span>` : ''}</div>
-          <label for="ex-note">Why? (optional)<input type="text" id="ex-note" placeholder="e.g. Accurate, learned our software in a week" maxlength="160"></label>
+          <label for="ex-note">Why? (optional)<input type="text" id="ex-note" placeholder="e.g. Accurate, learned our software in a week" maxlength="160" value="${esc(E ? E.note || '' : '')}"></label>
           <p class="small" id="exErr" role="alert" style="margin:0;color:var(--warn)"></p>
-          <div><button class="btn" type="submit" style="--accent:var(--gold)">Add example</button></div></form></div>
+          <div class="row"><button class="btn" type="submit" style="--accent:var(--gold)">${E ? 'Save changes' : 'Add example'}</button>${E ? '<button class="btn ghost" type="button" data-act="cancelEx">Cancel</button>' : ''}</div></form></div>
       <div class="stack" style="gap:20px">
         <div class="card stack"><div class="row between"><div class="t-m">2. HIRING CRITERIA</div>${crit.length ? `<span class="tag">${B.by === 'ai' ? 'Made by AI' : 'Basic'}</span>` : ''}</div>
           ${B.summary ? `<div class="banner b-info small">${esc(B.summary)}</div>` : ''}
@@ -1392,14 +1395,17 @@ document.addEventListener('click', async e => {
   if (act === 'demoCV') { const d = DEMO_CVS[+el.dataset.i]; if (d) { S.cvDraft = d.text; S.cvName = d.name; S.cvMsg = 'Loaded ' + esc(d.name) + '. Continue to pick a target job.'; render(); } return; }
   if (act === 'showRoad') { const a = analysis(); if (!a) return; if (await savePriv('analysis', { ...a, roadShown: true })) { if (S.route === 'climb') { S.flow = 'roadmap'; render(); window.scrollTo(0, 0); } toast('Your roadmap is ready.'); } return; }
   if (act === 'brainJob') { S.brainJob = el.dataset.id; return; }
-  if (act === 'rmExample') { const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; const ex = (brainFor(jid).examples || []).slice(); ex.splice(+el.dataset.i, 1); await saveBrain(jid, { examples: ex }); return; }
-  if (act === 'importPast') { const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; const ex = (brainFor(jid).examples || []).slice();
+  if (act === 'editExample') { const jid = brainJid(); const e = (brainFor(jid).examples || [])[+el.dataset.i]; if (!e) return; S.exEdit = { jid, i: +el.dataset.i, title: e.title || '', outcome: e.outcome || 'great', note: e.note || '' }; S.exDraft = e.text || ''; S.exMsg = ''; render(); const f = $('#exForm'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#ex-text').focus(); } return; }
+  if (act === 'cancelEx') { S.exEdit = null; S.exDraft = ''; render(); return; }
+  if (act === 'pastApps') { S.brainJob = el.dataset.id; S.exEdit = null; S.exDraft = ''; go('ai-manager'); window.scrollTo(0, 0); return; }
+  if (act === 'rmExample') { S.exEdit = null; S.exDraft = ''; const jid = brainJid(); const ex = (brainFor(jid).examples || []).slice(); ex.splice(+el.dataset.i, 1); await saveBrain(jid, { examples: ex }); return; }
+  if (act === 'importPast') { const jid = brainJid(); const ex = (brainFor(jid).examples || []).slice();
     Object.values(S.apps).filter(a => a.jobId === jid && ['selected', 'rejected'].includes(a.status) && !ex.some(e => e.appId === a.id)).forEach(a => ex.push({ appId: a.id, title: 'CareerCamp applicant ' + code(a.uid), outcome: a.status === 'selected' ? 'great' : 'nofit', text: candText(a).slice(0, 4000) + (a.test ? `\nAssessment score: ${a.test.score}` : ''), note: '', at: Date.now() }));
     if (await saveBrain(jid, { examples: ex.slice(-12) })) toast('Past applicants imported.'); return; }
-  if (act === 'genCrit') { const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; if (jid) await genCriteria(jid); return; }
-  if (act === 'rmCrit' || act === 'addCrit') { const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; const cr = readCrit(); if (act === 'rmCrit') cr.splice(+el.dataset.i, 1); else cr.push({ name: 'New criterion', good: '', weight: 3, signals: [] }); await saveBrain(jid, { criteria: cr }); return; }
+  if (act === 'genCrit') { const jid = brainJid(); if (jid) await genCriteria(jid); return; }
+  if (act === 'rmCrit' || act === 'addCrit') { const jid = brainJid(); const cr = readCrit(); if (act === 'rmCrit') cr.splice(+el.dataset.i, 1); else cr.push({ name: 'New criterion', good: '', weight: 3, signals: [] }); await saveBrain(jid, { criteria: cr }); return; }
   if (act === 'scoreApp') { if (S.busy) return; S.busy = true; render(); const r = await scoreApp(el.dataset.id); S.busy = false; if (r) { await savePriv('aiscores', aiScores()); toast('Scored against your criteria.'); } render(); return; }
-  if (act === 'scoreAll') { if (S.busy) return; const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; S.busy = true; render(); let n = 0;
+  if (act === 'scoreAll') { if (S.busy) return; const jid = brainJid(); S.busy = true; render(); let n = 0;
     for (const a of Object.values(S.apps).filter(a => a.jobId === jid && !['selected', 'rejected'].includes(a.status))) { if (await scoreApp(a.id, true)) n++; }
     S.busy = false; if (n) { await savePriv('aiscores', aiScores()); toast(`Scored ${n} applicant${n === 1 ? '' : 's'}.`); } render(); return; }
   if (act === 'addExtra') { const n = ($('#pj-xnew').value || '').trim().slice(0, 40); if (!n) { $('#pj-xnew').focus(); return; } S.draft = readDraft(); if (S.draft.extra.some(x => x.name.toLowerCase() === n.toLowerCase()) || SK.some(k => SKILLS[k].name.toLowerCase() === n.toLowerCase())) return toast('That skill is already on the list.'); S.draft.extra.push({ name: n, w: 3 }); render(); const ni = $('#pj-xnew'); if (ni) ni.focus(); return; }
@@ -1474,7 +1480,7 @@ document.addEventListener('change', e => {
   if (S.practice && e.target.name && /^pq\d+$/.test(e.target.name)) S.practice.ans[+e.target.name.slice(2)] = +e.target.value;
   if (id === 'a-show') document.querySelectorAll('#a-pass,#a-pass2').forEach(i => i.type = e.target.checked ? 'text' : 'password');
   if (id === 'cvFile') handleFile(e.target.files && e.target.files[0]);
-  if (id === 'bj') { S.brainJob = e.target.value; render(); }
+  if (id === 'bj') { S.brainJob = e.target.value; S.exEdit = null; S.exDraft = ''; render(); }
   if (S.sim && id.startsWith('sf-')) S.sim.ans[id.slice(3)] = e.target.value;
   if (S.sim && id.startsWith('sp-')) { const i = +id.slice(3); const set = new Set(S.sim.ans.rows || []); e.target.checked ? set.add(i) : set.delete(i); S.sim.ans.rows = [...set].sort(); const tr = e.target.closest('tr'); if (tr) tr.classList.toggle('sel', e.target.checked); }
   if (S.sim && id.startsWith('sc-')) { const L = (S.sim.ans.labels || []).slice(); L[+id.slice(3)] = e.target.value; S.sim.ans.labels = L; }
@@ -1503,14 +1509,17 @@ document.addEventListener('submit', async e => {
     S.busy = false; render(); return;
   }
   if (f.id === 'exForm') {
-    const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; const text = ($('#ex-text').value || '').trim();
+    const jid = brainJid(); const text = ($('#ex-text').value || '').trim();
     if (text.length < 40) { $('#exErr').textContent = 'Paste or upload their CV or work (at least a few lines).'; return; }
     const o = (f.querySelector('input[name=exo]:checked') || {}).value || 'great';
-    const ex = [...(brainFor(jid).examples || []), { title: $('#ex-title').value.trim().slice(0, 60), outcome: o, text: redact(text, null).slice(0, 4000), note: $('#ex-note').value.trim().slice(0, 160), at: Date.now() }].slice(-12);
-    if (await saveBrain(jid, { examples: ex })) { S.exDraft = ''; S.exMsg = ''; toast('Example added. The more you add, the better the criteria.'); }
+    const item = { title: $('#ex-title').value.trim().slice(0, 60), outcome: o, text: redact(text, null).slice(0, 4000), note: $('#ex-note').value.trim().slice(0, 160) };
+    const cur = (brainFor(jid).examples || []).slice(); const E = S.exEdit && S.exEdit.jid === jid && cur[S.exEdit.i] ? S.exEdit : null;
+    if (E) cur[E.i] = { ...cur[E.i], ...item, editedAt: Date.now() };
+    const ex = E ? cur : [...cur, { ...item, at: Date.now() }].slice(-12);
+    if (await saveBrain(jid, { examples: ex })) { S.exDraft = ''; S.exMsg = ''; S.exEdit = null; toast(E ? 'Past applicant updated. Use "Learn again from examples" to refresh the criteria.' : 'Example added. The more you add, the better the criteria.'); }
     return;
   }
-  if (f.id === 'critForm') { const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; if (await saveBrain(jid, { criteria: readCrit() })) toast('Criteria saved.'); return; }
+  if (f.id === 'critForm') { const jid = brainJid(); if (await saveBrain(jid, { criteria: readCrit() })) toast('Criteria saved.'); return; }
   if (f.id === 'ds' || f.id === 'ts') { S.filters.q = ($('#' + f.id + '-q').value || '').trim(); S.selJob = null; go('jobs'); window.scrollTo(0, 0); return; }
   if (f.id === 'hs' || f.id === 'js') {
     S.filters.q = ($('#' + f.id + '-q').value || '').trim();
@@ -1622,7 +1631,7 @@ document.addEventListener('submit', async e => {
   }
 });
 function readCrit() {
-  const jid = S.brainJob || (jobList().find(j => j.owner === S.uid) || {}).id; const old = brainFor(jid).criteria || [];
+  const jid = brainJid(); const old = brainFor(jid).criteria || [];
   return old.map((c, i) => { const n = $('#cr-n-' + i); if (!n) return c; return { ...c, name: n.value.trim().slice(0, 60) || c.name, good: ($('#cr-g-' + i) || { value: c.good }).value.trim().slice(0, 200), weight: +(($('#cr-w-' + i) || { value: c.weight }).value) || 3, signals: n.value.trim() === c.name ? (c.signals || []) : toks(n.value).slice(0, 5) }; });
 }
 function readDraft() {
