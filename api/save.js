@@ -40,8 +40,12 @@ export default async function handler(req, res) {
         ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, name = EXCLUDED.name, district = EXCLUDED.district,
           level = EXCLUDED.level, data = EXCLUDED.data, updated_at = now()`;
     } else if (col === 'jobs') {
-      const [cur] = await sql`SELECT owner FROM jobs WHERE id = ${id}`;
+      const [cur] = await sql`SELECT owner, data FROM jobs WHERE id = ${id}`;
       if (cur ? cur.owner !== user : doc.owner !== user) return send(res, 403, { error: 'forbidden' });
+      // Generated work sims are attached only by api/sim.js: keep the stored link, ignore the browser's.
+      const cd = (cur && cur.data) || {};
+      if (cd.sim && String(cd.sim).startsWith('gen-')) { doc.sim = cd.sim; doc.simInfo = cd.simInfo; }
+      else { if (doc.sim && String(doc.sim).startsWith('gen-')) delete doc.sim; delete doc.simInfo; }
       if (!doc.title || typeof doc.title !== 'string') return send(res, 400, { error: 'title_required' });
       doc.owner = cur ? cur.owner : user; delete doc.sample;
       // Application deadline (YYYY-MM-DD). The job closes automatically at the end of that day, Nepal time.

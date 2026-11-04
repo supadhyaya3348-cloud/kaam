@@ -429,7 +429,7 @@ const nid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 
 // ---------- navigation ----------
 const SEEK_NAV = [['dashboard','Dashboard'],['check','Skill check'],['jobs','Jobs'],['sims','Work sims'],['learn','Learn'],['mentors','Mentors'],['portfolio','Portfolio'],['applications','Applications']];
-const EMP_NAV = [['employer','Employer'],['post','Post a job'],['ai-manager','AI Manager'],['hire-mentors','Mentors']];
+const EMP_NAV = [['employer','Employer'],['post','Post a job'],['ai-manager','AI Manager']];
 function navHTML() {
   const p = me(); const items = !p || !p.role ? [['home','Home']] : p.role === 'employer' ? EMP_NAV : SEEK_NAV;
   return items.map(([r, l]) => `<a href="#${r}" ${S.route === r || (r === 'employer' && ['job-review', 'candidate'].includes(S.route)) ? 'aria-current="page"' : ''}>${esc(t(l))}</a>`).join('');
@@ -868,7 +868,7 @@ function practiceQs(j) {
   const out = []; use.forEach((k, i) => QUIZ[k].slice(0, i === 0 ? 3 : 2).forEach(q => out.push({ skill: k, q: q[0], opts: q[1], a: q[2] }))); return out.slice(0, 8);
 }
 // ---------- Work sims (virtual job experiences) ----------
-const simMeta = id => (S.simList || []).find(x => x.id === id) || null;
+const simMeta = id => (S.simList || []).find(x => x.id === id) || (Object.values(S.jobs).find(j => j.sim === id && j.simInfo) || {}).simInfo || null;
 const mySims = () => (me() && me().sims) || {};
 function simBlocked(a) { const j = S.jobs[a.jobId] || {}; return !!(j.sim && !mySims()[j.sim]); }
 function simStep(a) {
@@ -1000,11 +1000,9 @@ function vEmployer() {
   return `<section class="stack" style="gap:20px">
     <div class="framed" style="--accent:var(--gold)">${gems}<div class="row between"><div class="stack" style="gap:2px"><div class="mute small">Employer</div><h1 class="t-l">${esc(p.company || p.name)}</h1></div>
       <div class="row">${[['Open jobs', mine.filter(j => !isClosed(j)).length], ['Applicants', allApps.length], ['Shortlisted', count('shortlisted') + count('assessment')], ['Interview', count('interview')], ['Hired', count('selected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
-    <div class="grid g2" style="align-items:start">
+    <div class="stack">
       <div class="card stack"><div class="row between"><div class="t-m">YOUR JOBS</div><a class="btn sm" style="--accent:var(--gold)" href="#post">${esc(t('Post a job'))}</a></div>
         <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''} ${deadlineTag(j)}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants${j.deadline ? ` · <span>Deadline ${esc(fmtDay(j.deadline))}</span>` : ''}</div></div><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
-      <div class="card stack"><div class="t-m">SPONSORED SEATS</div><div class="small">Fund Base Camp fellowship seats in the skills you hire for. Graduates get a first interview with you.</div>
-        <div class="row"><button class="btn ghost sm" type="button" data-act="seats" data-d="-1" aria-label="Remove a seat">−</button><b class="t-l kv" style="font-size:28px">${+p.seats || 0}</b><button class="btn ghost sm" type="button" data-act="seats" data-d="1" aria-label="Add a seat">+</button><span class="small mute">seats sponsored</span></div></div>
     </div>
   </section>`;
 }
@@ -1018,8 +1016,17 @@ function vJobReview() {
       <div class="row" style="gap:6px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)} · ${esc(LEVELS[j.level].name)}</span>` : ''}${j.district ? `<span class="tag">${esc(j.district)}</span>` : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.sample ? '<span class="tag warm">Demo job</span>' : ''}</div></div>
       <div class="row">${[['Applied', apps.length], ['Shortlisted', c('shortlisted') + c('assessment')], ['Interview', c('interview')], ['Hired', c('selected')], ['Not now', c('rejected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
     ${(j.requirements || []).length || (j.extra || []).length ? `<div class="card stack" style="gap:8px"><b>What you asked for</b><div class="row" style="gap:6px">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `<span class="tag">${esc(SKILLS[k].name)} ${j.skills[k]}/5</span>`).join('')}${(j.extra || []).map(x => `<span class="tag">${esc(x.name)} ${x.w}/5</span>`).join('')}</div>${(j.requirements || []).length ? `<ul class="reqs small">${j.requirements.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}</div>` : ''}
+    ${simPanel(j)}
     ${applicantsBlock(j)}
   </section>`;
+}
+function simPanel(j) {
+  if (j.sample) return '';
+  if (S.genSim === j.id) return '<div class="card simcard row" style="--accent:var(--gold);background:var(--panel2)" role="status"><span class="spin" aria-hidden="true"></span><span><b>Creating the work simulation</b> <span class="small mute">from your description and requirements…</span></span></div>';
+  const m = j.sim && simMeta(j.sim);
+  if (!m) return `<div class="card row between" style="background:var(--panel2)"><div class="stack" style="gap:2px"><b>No work simulation yet</b><span class="small mute">Let CareerCamp build a short virtual day in this job from your post.</span></div><button class="btn sm" type="button" data-act="genSim" data-id="${esc(j.id)}" style="--accent:var(--gold)">Create work simulation</button></div>`;
+  const done = Object.values(S.apps).filter(a => a.jobId === j.id && ((S.profiles[a.uid] || {}).sims || {})[j.sim]).length;
+  return `<div class="card simcard row between" style="--accent:var(--gold);background:var(--panel2)"><div class="stack" style="gap:2px"><b>Work simulation: ${esc(m.title)}</b><span class="small mute">${m.tasks} tasks · about ${m.minutes} minutes · ${m.generated ? (m.by === 'ai' ? 'written by AI from your job post' : 'built from your job post') : 'CareerCamp sim'} · ${done} applicants done</span></div><button class="btn ghost sm" type="button" data-act="openSim" data-id="${esc(j.sim)}">Preview</button></div>`;
 }
 function vCandidate() {
   const j = myJob(); const a = S.selApp && S.apps[S.selApp]; if (!j || !a || a.jobId !== j.id) return vJobReview();
@@ -1102,7 +1109,7 @@ function vPost() {
       <fieldset class="stack" style="border:1px solid var(--line);border-radius:10px;padding:12px"><legend class="lbl" style="padding:0 6px">Fair hiring</legend>
         <label class="check" for="pj-blind"><input type="checkbox" id="pj-blind" ${d.blind ? 'checked' : ''}> Blind hiring: hide names, gender and district until I select</label>
 </fieldset>
-      <label for="pj-sim">Work simulation (optional)<select id="pj-sim"><option value="">None</option>${(S.simList || []).map(x => `<option value="${esc(x.id)}" ${d.sim === x.id ? 'selected' : ''}>${esc(x.title)} · ${esc(x.company)} · ${x.minutes} min</option>`).join('')}</select><span class="tiny mute" style="font-weight:400">Shortlisted candidates do this short virtual job before the proctored test. You see their score for each task.</span></label>
+      <label class="check" for="pj-autosim" style="align-items:flex-start"><input type="checkbox" id="pj-autosim" ${d.autoSim === false ? '' : 'checked'}> <span>Create a work simulation for this job automatically<span class="tiny mute" style="display:block;font-weight:400">CareerCamp turns your description and requirements into a short virtual day in this job. Shortlisted candidates do it before the proctored test, and you see their score for each task.</span></span></label>
       <label for="pj-deadline">Application deadline<input type="date" id="pj-deadline" required min="${todayNp()}" value="${esc(d.deadline || plusDays(todayNp(), 14))}"><span class="tiny mute" style="font-weight:400">The job closes automatically at the end of this day. No new applications after that.</span></label>
       <fieldset class="row" style="border:1px solid var(--line);border-radius:10px;padding:12px;gap:10px"><legend class="lbl" style="padding:0 6px">Job type</legend>
         ${JOB_TYPES.map(([v, l]) => `<label class="q" for="pj-t-${v}" style="flex:1 1 160px"><input type="radio" name="pjtype" id="pj-t-${v}" value="${v}" ${(d.type || 'full') === v ? 'checked' : ''}><span><b>${l}</b></span></label>`).join('')}</fieldset>
@@ -1242,7 +1249,7 @@ function render() {
   else if (!role && r !== 'home') r = 'home';
   else if (role === 'employer' && seekerRoutes.includes(r)) r = 'employer';
   else if (role === 'seeker' && empRoutes.includes(r)) r = 'dashboard';
-  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'ai-manager':vBrain, 'hire-mentors':vHireMentors, 'job-review':vJobReview, candidate:vCandidate, test:vTest, practice:vPractice, sims:vSims, sim:vSim, alerts:vAlerts, login:vLogin, logout:vLogout };
+  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'ai-manager':vBrain, 'hire-mentors':vEmployer, 'job-review':vJobReview, candidate:vCandidate, test:vTest, practice:vPractice, sims:vSims, sim:vSim, alerts:vAlerts, login:vLogin, logout:vLogout };
   const banner = S.offline ? `<div class="banner b-warn small" role="status" style="margin-bottom:16px"><b>You are offline.</b> ${S.uid ? `Showing your roadmap, courses and applications saved ${S.snapAt ? 'on ' + new Date(S.snapAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'on this device'}. Steps you tick now are kept and sync when you are back online.` : 'Connect to the internet once and log in. After that, your roadmap also opens offline.'}</div>` : '';
   $('#app').innerHTML = banner + (views[r] || vHome)();
   $('#nav').innerHTML = navHTML();
@@ -1443,7 +1450,9 @@ document.addEventListener('click', async e => {
   if (act === 'rmSample' && p) { const items = (p.portfolio || []).slice(); items.splice(+el.dataset.i, 1); await save('profiles', S.uid, { portfolio: items }, true); }
   if (act === 'selJob') { S.selJob = el.dataset.id; S.selApp = null; go('job-review'); window.scrollTo(0, 0); }
   if (act === 'setStatus') { const a = S.apps[el.dataset.id]; if (a && await save('apps', a.id, { status: el.dataset.s }, true)) toast({ shortlisted: 'Shortlisted. The candidate is notified and gets the mock test.', selected: 'Hired! Congratulations on your new team member.', rejected: 'Marked as not now.' }[el.dataset.s] || 'Updated.'); }
-  if (act === 'seats' && p) await save('profiles', S.uid, { seats: Math.max(0, (+p.seats || 0) + (+el.dataset.d)) }, true);
+  if (act === 'genSim' && p) { const id = el.dataset.id; if (S.genSim) return; S.genSim = id; render();
+    try { const r = await api('/api/sim', { action: 'generate', jobId: id }); S.jobs[id] = r.job; toast(`Work simulation ready: ${r.sim.tasks} tasks, about ${r.sim.minutes} minutes.`); } catch (e) { toast('Could not create the work simulation. Try again.'); }
+    S.genSim = null; render(); return; }
   if (act === 'aiImprove') aiImprove();
 });
 document.addEventListener('input', e => {
@@ -1587,7 +1596,15 @@ document.addEventListener('submit', async e => {
     if (!SK.some(k => d.skills[k] > 0)) { $('#postErr').textContent = 'Set at least one skill above 0 so CareerCamp can rank applicants.'; return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.deadline) || d.deadline < todayNp()) { $('#postErr').textContent = 'Pick an application deadline from today onwards.'; return; }
     const id = nid('j');
-    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...d, status: 'open', at: Date.now() })) { S.draft = null; S.selJob = id; toast('Job published. Jobseekers can see it now.'); go('job-review'); }
+    const { autoSim, ...jd } = d;
+    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...jd, status: 'open', at: Date.now() })) {
+      S.draft = null; S.selJob = id;
+      if (!autoSim) { toast('Job published. Jobseekers can see it now.'); go('job-review'); return; }
+      S.genSim = id; go('job-review'); toast('Job published. Creating its work simulation…');
+      try { const r = await api('/api/sim', { action: 'generate', jobId: id }); S.jobs[id] = r.job; toast(`Work simulation ready: ${r.sim.tasks} tasks, about ${r.sim.minutes} minutes.`); }
+      catch (e) { toast('Job published, but the work simulation could not be created. Try again from the job page.'); }
+      S.genSim = null; render();
+    }
   }
   if (f.id === 'chatForm') {
     const inp = $('#chatIn'); const q = inp.value.trim(); if (!q || S.busy || !S.sample) return;
@@ -1611,7 +1628,7 @@ function readCrit() {
 function readDraft() {
   const sk = {}; SK.forEach(k => sk[k] = +($('#pj-w-' + k) || { value: 0 }).value);
   const lvIn = document.querySelector('input[name=pjlv]:checked');
-  return { title: $('#pj-title').value.trim(), district: $('#pj-district').value.trim(), desc: $('#pj-desc').value.trim(), extra: [...document.querySelectorAll('[id^="pj-xn-"]')].map(el => ({ name: el.value.trim().slice(0, 40), w: +(($('#pj-xw-' + el.id.slice(6)) || { value: 3 }).value) })).filter(x => x.name), requirements: (($('#pj-req') || { value: '' }).value || '').split('\n').map(x => x.trim().slice(0, 120)).filter(Boolean).slice(0, 8), level: lvIn && LEVELS[lvIn.value] ? lvIn.value : 'fresher', skills: sk, blind: $('#pj-blind').checked, type: ((document.querySelector('input[name=pjtype]:checked') || {}).value) === 'part' ? 'part' : 'full', sim: ($('#pj-sim') || { value: '' }).value || '', deadline: ($('#pj-deadline') || { value: '' }).value || '' };
+  return { title: $('#pj-title').value.trim(), district: $('#pj-district').value.trim(), desc: $('#pj-desc').value.trim(), extra: [...document.querySelectorAll('[id^="pj-xn-"]')].map(el => ({ name: el.value.trim().slice(0, 40), w: +(($('#pj-xw-' + el.id.slice(6)) || { value: 3 }).value) })).filter(x => x.name), requirements: (($('#pj-req') || { value: '' }).value || '').split('\n').map(x => x.trim().slice(0, 120)).filter(Boolean).slice(0, 8), level: lvIn && LEVELS[lvIn.value] ? lvIn.value : 'fresher', skills: sk, blind: $('#pj-blind').checked, type: ((document.querySelector('input[name=pjtype]:checked') || {}).value) === 'part' ? 'part' : 'full', autoSim: !!($('#pj-autosim') || {}).checked, deadline: ($('#pj-deadline') || { value: '' }).value || '' };
 }
 async function aiImprove() {
   if (!S.sample || S.busy) return; const d = readDraft(); if (!d.title) { $('#postErr').textContent = 'Add a job title first, then improve it with AI.'; return; }

@@ -100,3 +100,7 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 ## Application deadlines
 
 Every job post has an application deadline (default: 14 days ahead). At the end of that day (Nepal time) the job closes automatically: it disappears from job search and matches, shows a "Closed" tag to the employer, and the server refuses new applications (`job_closed`). Applicants already in the pipeline continue as normal.
+
+## Auto-generated work sims
+
+When an employer publishes a job (the "Create a work simulation automatically" box is on by default), `POST /api/sim { action: 'generate', jobId }` builds a 3-task work sim from the job's title, description, requirements and skill weights (`api/_simgen.js`). With `ANTHROPIC_API_KEY` set, Claude writes the tasks and the server validates them strictly; otherwise (or if the AI output is invalid) a rule-based builder picks tasks for the job's top skills and writes a final email task from the job's own requirements. Generated sims and their answer keys are stored server-side in `private_docs` (user `__sims__`); the job only carries public `simInfo`. Employers can preview the sim from the job's applicants page.

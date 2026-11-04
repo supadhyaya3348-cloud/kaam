@@ -1,9 +1,23 @@
 import { sql, userOf, send, readBody } from './_lib.js';
 import { SIMS, SIM_PASS, publicSim, simList, gradeTask } from './_sims.js';
+import { generateSim, SIM_STORE } from './_simgen.js';
+
+// AI generation can take a while.
+export const config = { maxDuration: 60 };
+
+// Built-in sims live in _sims.js; sims generated for a job post live in private_docs under SIM_STORE.
+async function getSim(id) {
+  if (SIMS[id]) return SIMS[id];
+  if (!/^gen-[A-Za-z0-9_.:-]{1,120}$/.test(id)) return null;
+  const [row] = await sql`SELECT data FROM private_docs WHERE user_id = ${SIM_STORE} AND doc_id = ${id}`;
+  return row ? row.data : null;
+}
+const simInfo = s => ({ id: s.id, title: s.title, company: s.company, role: s.role, minutes: s.minutes, skills: s.skills, color: s.color, tasks: s.tasks.length, generated: true, by: s.by });
 
 // Work Sims API.
 // GET  /api/sim            -> { sims: [...] }                       list (anyone)
 // GET  /api/sim?id=ID      -> { sim, progress }                     one sim without answers, plus your progress
+// POST /api/sim { action:'generate', jobId } -> { job, sim }      employer: build a sim from their job post
 // POST /api/sim { id, task, answer } -> { score, checks, model, tip, done, total, passed, progress }
 // Each task is graded once, on the server. Finishing all tasks writes a verified result to your profile.
 
@@ -34,7 +48,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const id = String((req.query && req.query.id) || new URL(req.url, 'http://x').searchParams.get('id') || '');
       if (!id) return send(res, 200, { sims: simList() });
-      const s = SIMS[id]; if (!s) return send(res, 404, { error: 'not_found' });
+      const s = await getSim(id); if (!s) return send(res, 404, { error: 'not_found' });
       let progress = null;
       if (user) { const [row] = await sql`SELECT data FROM private_docs WHERE user_id = ${user} AND doc_id = ${'sim-' + id}`; progress = row ? row.data : null; }
       if (progress && progress.tasks) { for (const t of s.tasks) if (progress.tasks[t.id]) progress.tasks[t.id].model = t.model; }
@@ -43,7 +57,20 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
     if (!user) return send(res, 401, { error: 'login_required' });
     const body = await readBody(req) || {};
-    const s = SIMS[String(body.id || '')]; if (!s) return send(res, 404, { error: 'not_found' });
+    if (body.action === 'generate') {
+      const [job] = await sql`SELECT id, owner, data FROM jobs WHERE id = ${String(body.jobId || '')}`;
+      if (!job) return send(res, 404, { error: 'not_found' });
+      if (job.owner !== user) return send(res, 403, { error: 'forbidden' });
+      const jd = job.data || {};
+      if (jd.sim && String(jd.sim).startsWith('gen-')) { const cur = await getSim(jd.sim); if (cur) return send(res, 200, { job: jd, sim: simInfo(cur) }); }
+      const def = await generateSim(jd, job.id);
+      await sql`INSERT INTO private_docs (user_id, doc_id, data) VALUES (${SIM_STORE}, ${def.id}, ${JSON.stringify(def)}::jsonb)
+        ON CONFLICT (user_id, doc_id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+      const next = { ...jd, sim: def.id, simInfo: simInfo(def) };
+      await sql`UPDATE jobs SET data = ${JSON.stringify(next)}::jsonb, updated_at = now() WHERE id = ${job.id}`;
+      return send(res, 200, { job: next, sim: simInfo(def) });
+    }
+    const s = await getSim(String(body.id || '')); if (!s) return send(res, 404, { error: 'not_found' });
     const task = s.tasks.find(t => t.id === body.task); if (!task) return send(res, 400, { error: 'bad_task' });
     const docId = 'sim-' + s.id;
     const [row] = await sql`SELECT data FROM private_docs WHERE user_id = ${user} AND doc_id = ${docId}`;
