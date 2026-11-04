@@ -61,7 +61,7 @@ window.KAAM_NE = (() => {
     'Fill in your name, district and company name.': 'आफ्नो नाम, जिल्ला र कम्पनीको नाम भर्नुहोस्।',
     'Only you can see your CV. Employers never get it; they see your skill scores and work samples.': 'तपाईंको CV तपाईं मात्र देख्नुहुन्छ। रोजगारदाताले सीपका अंक र कामका नमुना मात्र देख्छन्।',
     'Drop your CV here': 'आफ्नो CV यहाँ राख्नुहोस्', 'PDF, Word (.docx) or .txt': 'PDF, Word (.docx) वा .txt', 'Choose a file': 'फाइल छान्नुहोस्',
-    'No CV handy? Try a demo:': 'CV छैन? डेमो प्रयोग गर्नुहोस्:', 'Demo CV #: Sita (fresher)': 'डेमो CV #: सीता (फ्रेसर)', 'Demo CV #: Anita (returning after a career break)': 'डेमो CV #: अनिता (करियर ब्रेकपछि फर्किंदै)',
+    'No CV handy? Try a demo:': 'CV छैन? डेमो प्रयोग गर्नुहोस्:', 'Demo CV #: Sita (fresher)': 'डेमो CV #: सीता (फ्रेसर)', 'Demo CV #: Aarati (cloud security engineer)': 'डेमो CV #: आरती (क्लाउड सुरक्षा इन्जिनियर)', 'Demo CV #: Anita (returning after a career break)': 'डेमो CV #: अनिता (करियर ब्रेकपछि फर्किंदै)',
     'Or paste your CV text': 'वा आफ्नो CV को पाठ टाँस्नुहोस्', 'Education, work experience, skills…': 'शिक्षा, कामको अनुभव, सीप…', 'Skip for now': 'अहिलेलाई छोड्नुहोस्',
     'Add a bit more CV text (at least a few lines), or choose Skip for now.': 'CV मा अलि बढी पाठ थप्नुहोस् (कम्तीमा केही लाइन), वा "अहिलेलाई छोड्नुहोस्" छान्नुहोस्।',
     'Pasted text': 'टाँसिएको पाठ', 'This file is over # MB. Use a smaller file or paste the text.': 'यो फाइल # MB भन्दा ठूलो छ। सानो फाइल प्रयोग गर्नुहोस् वा पाठ टाँस्नुहोस्।',
