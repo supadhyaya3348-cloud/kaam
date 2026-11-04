@@ -1089,8 +1089,9 @@ function vCandidate() {
   return `<section class="stack" style="gap:20px"><div class="row"><a class="btn ghost sm" href="#job-review">← Applicants for ${esc(j.title)}</a></div>${reviewPanel(a, j)}</section>`;
 }
 function appActions(a, j) {
-  if (j.sample) return '<div class="tiny mute">Demo job: CareerCamp moves these applicants automatically. Post your own job to manage the stages.</div>';
-  return `<div class="row">${a.status === 'applied' ? `<button class="btn sm" style="--accent:var(--gold)" type="button" data-act="setStatus" data-id="${esc(a.id)}" data-s="shortlisted">Shortlist and send proctored test</button>` : ''}
+  if (j.sample && !j.openReview) return '<div class="tiny mute">Demo job: CareerCamp moves these applicants automatically. Post your own job to manage the stages.</div>';
+  const note = a.status === 'applied' ? (a.ready ? '<div class="tiny mute">Ready for review: work sim, gap analysis and courses are done.</div>' : '<div class="tiny mute">Still getting ready (work sim, gap analysis or courses not finished). You can still shortlist by hand.</div>') : '';
+  return `${note}<div class="row">${a.status === 'applied' ? `<button class="btn sm" style="--accent:var(--gold)" type="button" data-act="setStatus" data-id="${esc(a.id)}" data-s="shortlisted">Shortlist this applicant and send proctored test</button>` : ''}
     ${a.status === 'shortlisted' ? '<span class="tiny mute">Shortlisted. The candidate is practising and will start the proctored assessment when ready.</span>' : ''}
     ${a.status === 'assessment' ? `<span class="tiny mute">Proctored assessment ${a.testStart ? 'in progress' : 'sent'}.</span>` : ''}
     ${a.phone && (a.status === 'interview' || a.status === 'selected') ? `<a class="btn ghost sm" href="tel:${esc(a.phone)}">Call candidate: ${esc(a.phone)}</a>` : ''}
@@ -1615,7 +1616,7 @@ document.addEventListener('click', async e => {
   if (act === 'fellowDone' && p && p.fellow) await save('profiles', S.uid, { fellow: { week: p.fellow.week + 1 } }, true);
   if (act === 'rmSample' && p) { const items = (p.portfolio || []).slice(); items.splice(+el.dataset.i, 1); await save('profiles', S.uid, { portfolio: items }, true); }
   if (act === 'selJob') { S.selJob = el.dataset.id; S.selApp = null; go('job-review'); window.scrollTo(0, 0); }
-  if (act === 'setStatus') { const a = S.apps[el.dataset.id]; if (a && await save('apps', a.id, { status: el.dataset.s }, true)) toast({ shortlisted: 'Shortlisted. The candidate is notified and gets the mock test.', selected: 'Hired! Congratulations on your new team member.', rejected: 'Marked as not now.' }[el.dataset.s] || 'Updated.'); }
+  if (act === 'setStatus') { const a = S.apps[el.dataset.id]; if (a && await save('apps', a.id, { status: el.dataset.s }, true)) toast({ shortlisted: 'Shortlisted. The candidate is notified to take the proctored assessment.', selected: 'Hired! Congratulations on your new team member.', rejected: 'Marked as not now.' }[el.dataset.s] || 'Updated.'); }
   if (act === 'genSim' && p) { const id = el.dataset.id; if (S.genSim) return; S.genSim = id; render();
     try { const r = await api('/api/sim', { action: 'generate', jobId: id }); S.jobs[id] = r.job; toast(`Work simulation ready: ${r.sim.tasks} tasks, about ${r.sim.minutes} minutes.`); } catch (e) { toast('Could not create the work simulation. Try again.'); }
     S.genSim = null; render(); return; }
