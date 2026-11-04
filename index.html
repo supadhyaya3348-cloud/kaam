@@ -231,6 +231,28 @@ function reqCheck(cv, reqs) {
   const met = (reqs || []).filter(r => { const w = words(r); return w.length && w.filter(x => low.includes(x)).length / w.length >= 0.5; });
   return { met, gaps: (reqs || []).filter(r => !met.includes(r)) };
 }
+function searchJobs(f, list) {
+  const words = String(f.q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  return (list || jobList()).filter(j => {
+    if (f.fo && !j.femaleOnly) return false; if (f.cb && !j.careerBreak) return false;
+    if (f.lv && j.level !== f.lv) return false; if (f.dist && String(j.district || '').toLowerCase() !== f.dist.toLowerCase()) return false;
+    if (!words.length) return true;
+    const hay = [j.title, j.company, j.district, j.desc, ...(j.requirements || []), ...((j.extra || []).map(x => x.name)), ...SK.filter(k => (+(j.skills || {})[k] || 0) >= 2).map(k => SKILLS[k].name), j.level && LEVELS[j.level] ? LEVELS[j.level].label : ''].join(' ').toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+}
+function searchBar(id, extra) {
+  const f = S.filters; const dists = [...new Set(jobList().map(j => j.district).filter(Boolean))].sort();
+  return `<form class="card stack" id="${id}" role="search" style="gap:10px">
+    <div class="row" style="gap:10px;align-items:flex-end"><label for="${id}-q" style="flex:1 1 260px">Search jobs<input type="search" id="${id}-q" value="${esc(f.q)}" placeholder="Job title, skill, company or district" autocomplete="off"></label>
+      <button class="btn" type="submit" style="--accent:var(--gold)">Search</button></div>
+    ${extra ? `<div class="row" style="gap:10px">
+      <label for="${id}-lv" style="flex:0 1 180px">Level<select id="${id}-lv"><option value="">All levels</option>${Object.keys(LEVELS).map(l => `<option value="${l}" ${f.lv === l ? 'selected' : ''}>${esc(LEVELS[l].label)}</option>`).join('')}</select></label>
+      <label for="${id}-dist" style="flex:0 1 180px">District<select id="${id}-dist"><option value="">Anywhere</option>${dists.map(d => `<option ${f.dist === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
+      <label class="check" for="jfo"><input type="checkbox" id="jfo" ${f.fo ? 'checked' : ''}> Female-only</label>
+      <label class="check" for="jcb"><input type="checkbox" id="jcb" ${f.cb ? 'checked' : ''}> Career-break friendly</label>
+      ${f.q || f.lv || f.dist || f.fo || f.cb ? '<button class="btn ghost sm" type="button" data-act="clearSearch">Clear</button>' : ''}</div>` : ''}</form>`;
+}
 const jobReqs = j => [...((j && j.requirements) || []), ...((j && j.extra) || []).filter(x => x.w > 0).map(x => x.name)];
 function redact(cv, prof) {
   let t = String(cv || '');
@@ -257,7 +279,7 @@ const NE = {
 };
 
 // ---------- state ----------
-const S = { uid:null, db:null, sample:null, local:false, lang:'en', route:'home', profiles:{}, jobs:{}, apps:{}, ments:{}, priv:{}, selJob:null, quiz:null, chat:[], busy:false, filters:{q:'',fo:false,cb:false}, flow:'level', pick:null, cvDraft:'', cvName:'', cvMsg:'', target:null };
+const S = { uid:null, db:null, sample:null, local:false, lang:'en', route:'home', profiles:{}, jobs:{}, apps:{}, ments:{}, priv:{}, selJob:null, quiz:null, chat:[], busy:false, filters:{q:'',fo:false,cb:false,lv:'',dist:''}, flow:'level', pick:null, cvDraft:'', cvName:'', cvMsg:'', target:null };
 try { S.lang = localStorage.getItem('kaam-lang') || 'en'; } catch (e) {}
 const t = s => (S.lang === 'ne' && NE[s]) ? NE[s] : s;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -318,7 +340,7 @@ const SEEK_NAV = [['dashboard','Dashboard'],['check','Skill check'],['jobs','Job
 const EMP_NAV = [['employer','Employer'],['post','Post a job'],['hire-mentors','Mentors']];
 function navHTML() {
   const p = me(); const items = !p || !p.role ? [['home','Home']] : p.role === 'employer' ? EMP_NAV : SEEK_NAV;
-  return items.map(([r, l]) => `<a href="#${r}" ${S.route === r ? 'aria-current="page"' : ''}>${esc(t(l))}</a>`).join('');
+  return items.map(([r, l]) => `<a href="#${r}" ${S.route === r || (r === 'employer' && ['job-review', 'candidate'].includes(S.route)) ? 'aria-current="page"' : ''}>${esc(t(l))}</a>`).join('');
 }
 function go(r) { if (location.hash !== '#' + r) location.hash = r; else render(); }
 window.addEventListener('hashchange', () => { S.route = (location.hash || '#home').slice(1) || 'home'; render(); window.scrollTo(0, 0); });
@@ -431,6 +453,7 @@ function vHome() {
         <button class="btn" type="button" data-act="startClimb" style="--accent:var(--text)">${esc(t('Start my climb'))}</button>
         <button class="btn ghost" type="button" data-act="startHire">${esc(t('I\'m hiring'))}</button>
       </div>
+      ${searchBar('hs', false)}
       ${p && p.role ? `<div class="banner b-info">Welcome back, ${esc(p.name)}. <a href="#${p.role === 'employer' ? 'employer' : 'dashboard'}">Open your dashboard</a></div>` : ''}
     </div>
     <div class="heroart" role="img" aria-label="A Himalayan night scene with a tent at base camp">
@@ -438,6 +461,7 @@ function vHome() {
       <div class="cap"><div class="tiername" style="--accent:var(--base);font-size:24px">BASE CAMP</div><div class="small">Every climb starts here</div></div>
     </div>
   </section>
+  ${S.homeSearch ? homeResults() : ''}
   <section class="stack" style="margin-top:56px">
     <h2 class="t-l">Three cards, one climb</h2>
     <div class="grid g3">${tierCard('fresher')}${tierCard('mid')}${tierCard('senior')}</div>
@@ -453,6 +477,14 @@ function vHome() {
       <li><b>Apply blind</b><div class="mute small">Employers rank you by skill. Your name shows only when they select you.</div></li>
     </ol>
   </section>`;
+}
+
+function homeResults() {
+  const js = searchJobs(S.filters);
+  return `<section class="stack" id="homeResults" style="margin-top:40px"><div class="row between"><h2 class="t-l">Jobs${S.filters.q ? ` for "${esc(S.filters.q)}"` : ''}</h2><span class="small mute">${js.length} found</span></div>
+    <div class="card list">${js.length ? js.map(j => `<div class="row between"><div style="min-width:0"><b>${esc(j.title)}</b> <span class="tiny mute">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>
+      <div class="row" style="gap:6px;margin-top:3px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''}${j.demo ? '<span class="tag warm">Demo</span>' : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.femaleOnly ? '<span class="tag">Female-only</span>' : ''}</div></div>
+      <button class="btn sm" type="button" data-act="viewFromHome" data-id="${esc(j.id)}">${S.uid && me() && me().role === 'seeker' ? 'View' : 'Log in to apply'}</button></div>`).join('') : '<div class="empty">No jobs match. Try a shorter word, like "excel" or "Kaski".</div>'}</div></section>`;
 }
 
 // ---------- climb flow ----------
@@ -639,12 +671,12 @@ function vCheck() {
 }
 function vJobs() {
   const p = me(); const f = S.filters;
-  let js = jobList().filter(j => (!f.fo || j.femaleOnly) && (!f.cb || j.careerBreak) && (!f.q || (j.title + ' ' + (j.company || '') + ' ' + (j.district || '')).toLowerCase().includes(f.q.toLowerCase())));
+  let js = searchJobs(f);
   js = js.map(j => [j, match(p, j)]).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const open = S.selJob && S.jobs[S.selJob];
   return `<section class="stack"><h1 class="t-l">${esc(t('Jobs'))}</h1>
-    <div class="card row"><label for="jq" style="flex:1 1 240px">Search<input type="text" id="jq" value="${esc(f.q)}" placeholder="Title, company or district"></label>      <label class="check" for="jfo"><input type="checkbox" id="jfo" ${f.fo ? 'checked' : ''}> Female-only</label>
-      <label class="check" for="jcb"><input type="checkbox" id="jcb" ${f.cb ? 'checked' : ''}> Career-break friendly</label></div>
+    ${searchBar('js', true)}
+    <div class="small mute" role="status">${js.length} job${js.length === 1 ? '' : 's'}${f.q ? ` for "${esc(f.q)}"` : ''}, best match first</div>
     ${open ? jobDetail(open, p) : ''}
     <div class="card list">${js.length ? js.map(j => jobRow(j, p, true)).join('') : '<div class="empty">No jobs match. Clear a filter, or check back when employers post new jobs.</div>'}</div></section>`;
 }
@@ -778,7 +810,6 @@ function vTest() {
 function vEmployer() {
   const p = me();
   const mine = jobList().filter(j => j.owner === S.uid || j.sample);
-  const sel = S.selJob && S.jobs[S.selJob] && mine.includes(S.jobs[S.selJob]) ? S.jobs[S.selJob] : mine[0];
   const allApps = Object.values(S.apps).filter(a => mine.some(j => j.id === a.jobId));
   const count = st => allApps.filter(a => a.status === st).length;
   return `<section class="stack" style="gap:20px">
@@ -786,12 +817,28 @@ function vEmployer() {
       <div class="row">${[['Open jobs', mine.length], ['Applicants', allApps.length], ['Shortlisted', count('shortlisted') + count('assessment')], ['Interview', count('interview')], ['Hired', count('selected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
     <div class="grid g2" style="align-items:start">
       <div class="card stack"><div class="row between"><div class="t-m">YOUR JOBS</div><a class="btn sm" style="--accent:var(--gold)" href="#post">${esc(t('Post a job'))}</a></div>
-        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants</div></div><button class="btn ${sel && sel.id === j.id ? '' : 'ghost'} sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review</button></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
+        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants</div></div><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
       <div class="card stack"><div class="t-m">SPONSORED SEATS</div><div class="small">Fund Base Camp fellowship seats in the skills you hire for. Graduates get a first interview with you.</div>
         <div class="row"><button class="btn ghost sm" type="button" data-act="seats" data-d="-1" aria-label="Remove a seat">−</button><b class="t-l kv" style="font-size:28px">${+p.seats || 0}</b><button class="btn ghost sm" type="button" data-act="seats" data-d="1" aria-label="Add a seat">+</button><span class="small mute">seats sponsored</span></div></div>
     </div>
-    ${sel ? applicantsBlock(sel) : ''}
   </section>`;
+}
+function myJob() { const j = S.selJob && S.jobs[S.selJob]; return j && (j.owner === S.uid || j.sample) ? j : null; }
+function vJobReview() {
+  const j = myJob(); if (!j) return vEmployer();
+  const apps = Object.values(S.apps).filter(a => a.jobId === j.id); const c = st => apps.filter(a => a.status === st).length;
+  return `<section class="stack" style="gap:20px">
+    <div><a class="btn ghost sm" href="#employer">← All jobs</a></div>
+    <div class="framed" style="--accent:var(--gold)">${gems}<div class="row between"><div class="stack" style="gap:4px"><div class="mute small">Applicants dashboard</div><h1 class="t-l">${esc(j.title)}</h1>
+      <div class="row" style="gap:6px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)} · ${esc(LEVELS[j.level].name)}</span>` : ''}${j.district ? `<span class="tag">${esc(j.district)}</span>` : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.sample ? '<span class="tag warm">Demo job</span>' : ''}</div></div>
+      <div class="row">${[['Applied', apps.length], ['Shortlisted', c('shortlisted') + c('assessment')], ['Interview', c('interview')], ['Hired', c('selected')], ['Not now', c('rejected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
+    ${(j.requirements || []).length || (j.extra || []).length ? `<div class="card stack" style="gap:8px"><b>What you asked for</b><div class="row" style="gap:6px">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `<span class="tag">${esc(SKILLS[k].name)} ${j.skills[k]}/5</span>`).join('')}${(j.extra || []).map(x => `<span class="tag">${esc(x.name)} ${x.w}/5</span>`).join('')}</div>${(j.requirements || []).length ? `<ul class="reqs small">${j.requirements.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}</div>` : ''}
+    ${applicantsBlock(j)}
+  </section>`;
+}
+function vCandidate() {
+  const j = myJob(); const a = S.selApp && S.apps[S.selApp]; if (!j || !a || a.jobId !== j.id) return vJobReview();
+  return `<section class="stack" style="gap:20px"><div class="row"><a class="btn ghost sm" href="#job-review">← Applicants for ${esc(j.title)}</a></div>${reviewPanel(a, j)}</section>`;
 }
 function appActions(a, j) {
   if (j.sample) return '<div class="tiny mute">Demo job: Kaam moves these applicants automatically. Post your own job to manage the stages.</div>';
@@ -814,7 +861,7 @@ function reviewPanel(a, j) {
   const x = S.profiles[a.uid] || {}; const sc = scoresOf(x); const show = !j.blind || a.status === 'interview' || a.status === 'selected';
   const reqs = jobReqs(j); const rc = a.cv ? reqCheck(a.cv, reqs) : null; const need = SK.filter(k => (+j.skills[k] || 0) > 0);
   return `<div class="card hl stack" id="review" style="--accent:var(--gold)">
-    <div class="row between"><div><div class="lbl" style="color:var(--gold)">Review candidate</div><h2 class="t-m">${show ? esc(x.name || '') + ' · ' + esc(x.district || '') : 'Candidate ' + code(a.uid)}</h2></div><span class="row"><b class="kv">Match ${match(x, j)}</b><button class="btn ghost sm" type="button" data-act="closeReview">Close</button></span></div>
+    <div class="row between"><div><div class="lbl" style="color:var(--gold)">Review candidate</div><h2 class="t-m">${show ? esc(x.name || '') + ' · ' + esc(x.district || '') : 'Candidate ' + code(a.uid)}</h2></div><span class="row"><b class="kv">Match ${match(x, j)}</b></span></div>
     ${pipeHTML(a)}
     <div class="grid g2" style="align-items:start">
       <div class="stack">
@@ -834,13 +881,13 @@ function applicantsBlock(j) {
   const outA = apps.length ? apps.filter(x => isOutside(x[1])).length / apps.length : 0, outS = groups.Shortlisted.length ? groups.Shortlisted.filter(x => isOutside(x[1])).length / groups.Shortlisted.length : null;
   const drop = outS != null && apps.length >= 3 && outA - outS >= 0.15;
   const rev = S.selApp && S.apps[S.selApp] && S.apps[S.selApp].jobId === j.id ? S.apps[S.selApp] : null;
-  return `${rev ? reviewPanel(rev, j) : ''}<div class="grid g2" style="align-items:start">
+  return `<div class="grid g2" style="align-items:start">
     <div class="card stack"><div class="row between"><div class="t-m">${esc(t('Applicants').toUpperCase())} · ${esc(j.title)}</div><span class="tiny mute">Ranked by skill match</span></div>
       ${j.blind ? '<div class="banner b-warn small">Blind hiring is on. Names and contact details stay hidden until a candidate passes the assessment and reaches the interview.</div>' : ''}
       <div class="list">${apps.length ? apps.map(([a, x, m], i) => { const show = !j.blind || a.status === 'interview' || a.status === 'selected'; const sc = scoresOf(x); return `<div class="stack" style="gap:6px">
         <div class="row between"><b>${i + 1}. ${show ? esc(x.name) + ' · ' + esc(x.district || '') : 'Candidate ' + code(a.uid)}</b><span class="row"><b class="kv">Match ${m}</b><span class="tag ${a.status === 'selected' || a.status === 'interview' ? 'base' : a.status === 'rejected' ? 'warm' : ''}">${esc(stageName(a.status))}</span></span></div>${pipeHTML(a)}
         <div class="tiny mute">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `${esc(SKILLS[k].name)} ${sc[k] != null ? sc[k] : '–'}`).join(' · ')} · ${(x.portfolio || []).length} work samples · ${a.cv ? 'CV shared' : 'no CV'}${a.test ? ' · assessment ' + a.test.score : ''}</div>
-        <div class="row"><button class="btn sm ${rev && rev.id === a.id ? '' : 'ghost'}" type="button" data-act="revApp" data-id="${esc(a.id)}" style="--accent:var(--gold)">Review skills, CV and test</button></div></div>`; }).join('') : '<div class="empty">No applicants yet. They appear here ranked by skill match.</div>'}</div></div>
+        <div class="row"><button class="btn sm" type="button" data-act="revApp" data-id="${esc(a.id)}" style="--accent:var(--gold)">Review skills, CV and test</button></div></div>`; }).join('') : '<div class="empty">No applicants yet. They appear here ranked by skill match.</div>'}</div></div>
     <div class="card stack"><div class="t-m" style="color:var(--gold)">FAIR HIRING CHECK</div>
       <div class="scroll"><table class="fair"><thead><tr><th>Share of candidates</th>${Object.keys(groups).map(g => `<th>${g}</th>`).join('')}</tr></thead><tbody>
         <tr><td>Women</td>${Object.values(groups).map(g => `<td>${share(g, x => x.gender === 'woman')}</td>`).join('')}</tr>
@@ -876,7 +923,7 @@ function vPost() {
 // ---------- render ----------
 function render() {
   const p = me(); const role = p && p.role;
-  const seekerRoutes = ['dashboard','check','jobs','learn','mentors','portfolio','applications','test','practice'], empRoutes = ['employer','post','hire-mentors'];
+  const seekerRoutes = ['dashboard','check','jobs','learn','mentors','portfolio','applications','test','practice'], empRoutes = ['employer','post','hire-mentors','job-review','candidate'];
   let r = S.route;
   if (r === 'login' && S.api && S.uid) r = role ? (role === 'employer' ? 'employer' : 'dashboard') : 'home';
   if (r === 'login' || r === 'logout') { /* account pages */ }
@@ -887,7 +934,7 @@ function render() {
   else if (!role && r !== 'home') r = 'home';
   else if (role === 'employer' && seekerRoutes.includes(r)) r = 'employer';
   else if (role === 'seeker' && empRoutes.includes(r)) r = 'dashboard';
-  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'hire-mentors':vHireMentors, test:vTest, practice:vPractice, alerts:vAlerts, login:vLogin, logout:vLogout };
+  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'hire-mentors':vHireMentors, 'job-review':vJobReview, candidate:vCandidate, test:vTest, practice:vPractice, alerts:vAlerts, login:vLogin, logout:vLogout };
   const banner = '';
   $('#app').innerHTML = banner + (views[r] || vHome)();
   $('#nav').innerHTML = navHTML();
@@ -1010,9 +1057,10 @@ document.addEventListener('click', async e => {
   if (act === 'showRoad') { const a = analysis(); if (!a) return; if (await savePriv('analysis', { ...a, roadShown: true })) { if (S.route === 'climb') { S.flow = 'roadmap'; render(); window.scrollTo(0, 0); } toast('Your roadmap is ready.'); } return; }
   if (act === 'addExtra') { const n = ($('#pj-xnew').value || '').trim().slice(0, 40); if (!n) { $('#pj-xnew').focus(); return; } S.draft = readDraft(); if (S.draft.extra.some(x => x.name.toLowerCase() === n.toLowerCase()) || SK.some(k => SKILLS[k].name.toLowerCase() === n.toLowerCase())) return toast('That skill is already on the list.'); S.draft.extra.push({ name: n, w: 3 }); render(); const ni = $('#pj-xnew'); if (ni) ni.focus(); return; }
   if (act === 'rmExtra') { S.draft = readDraft(); S.draft.extra.splice(+el.dataset.i, 1); render(); return; }
-  if (act === 'revApp') { S.selApp = S.selApp === el.dataset.id ? null : el.dataset.id; render(); const r = $('#review'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-  if (act === 'closeReview') { S.selApp = null; render(); return; }
-  if (act === 'openNotif') { if (el.dataset.job) S.selJob = el.dataset.job; if (el.dataset.app) S.selApp = el.dataset.app; go(el.dataset.href || 'home'); return; }
+  if (act === 'revApp') { S.selApp = el.dataset.id; const a = S.apps[el.dataset.id]; if (a) S.selJob = a.jobId; go('candidate'); window.scrollTo(0, 0); return; }
+  if (act === 'openNotif') { if (el.dataset.job) S.selJob = el.dataset.job; if (el.dataset.app) S.selApp = el.dataset.app; go(el.dataset.app && el.dataset.href === 'employer' ? 'candidate' : el.dataset.href || 'home'); return; }
+  if (act === 'clearSearch') { S.filters = { q: '', fo: false, cb: false, lv: '', dist: '' }; render(); return; }
+  if (act === 'viewFromHome') { const p2 = me(); S.selJob = el.dataset.id; if (S.uid && p2 && p2.role === 'seeker') { go('jobs'); window.scrollTo(0, 0); } else if (S.uid && p2 && p2.role === 'employer') toast('Switch to a jobseeker account to apply.'); else { S.authMode = 'signup'; needLogin('startClimb'); } return; }
   if (act === 'practice') { const a = S.apps[el.dataset.id]; if (!a) return; S.practice = { appId: a.id, jobId: a.jobId, qs: practiceQs(S.jobs[a.jobId]), ans: {}, result: null }; go('practice'); window.scrollTo(0, 0); return; }
   if (act === 'practiceAgain' && S.practice) { S.practice.ans = {}; S.practice.result = null; render(); window.scrollTo(0, 0); return; }
   if (act === 'readyTest') { if (!S.api) return toast('The assessment needs the Kaam server. Check your connection.'); S.test = { appId: el.dataset.id, intro: true }; go('test'); window.scrollTo(0, 0); return; }
@@ -1049,14 +1097,14 @@ document.addEventListener('click', async e => {
   if (act === 'joinFellow' && p) { if (await save('profiles', S.uid, { fellow: { week: 1 } }, true)) toast('Welcome to the fellowship. Week 1 starts now.'); }
   if (act === 'fellowDone' && p && p.fellow) await save('profiles', S.uid, { fellow: { week: p.fellow.week + 1 } }, true);
   if (act === 'rmSample' && p) { const items = (p.portfolio || []).slice(); items.splice(+el.dataset.i, 1); await save('profiles', S.uid, { portfolio: items }, true); }
-  if (act === 'selJob') { S.selJob = el.dataset.id; S.selApp = null; render(); }
+  if (act === 'selJob') { S.selJob = el.dataset.id; S.selApp = null; go('job-review'); window.scrollTo(0, 0); }
   if (act === 'setStatus') { const a = S.apps[el.dataset.id]; if (a && await save('apps', a.id, { status: el.dataset.s }, true)) toast({ shortlisted: 'Shortlisted. The candidate is notified and gets the mock test.', selected: 'Hired! Congratulations on your new team member.', rejected: 'Marked as not now.' }[el.dataset.s] || 'Updated.'); }
   if (act === 'seats' && p) await save('profiles', S.uid, { seats: Math.max(0, (+p.seats || 0) + (+el.dataset.d)) }, true);
   if (act === 'aiImprove') aiImprove();
 });
 document.addEventListener('input', e => {
   const id = e.target.id;
-  if (id === 'jq') { S.filters.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#jq'); n.focus(); n.setSelectionRange(pos, pos); }
+  if (id === 'js-q') { S.filters.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#js-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} }
   if (id === 'cvText') S.cvDraft = e.target.value;
   if (id.startsWith('pj-w-')) { const k = id.slice(5); const v = $('#pj-wv-' + k); if (v) v.textContent = e.target.value; }
   if (id.startsWith('pj-xw-')) { const v = $('#pj-xwv-' + id.slice(6)); if (v) v.textContent = e.target.value; }
@@ -1070,6 +1118,8 @@ document.addEventListener('change', e => {
   if (id === 'a-show') document.querySelectorAll('#a-pass,#a-pass2').forEach(i => i.type = e.target.checked ? 'text' : 'password');
   if (id === 'cvFile') handleFile(e.target.files && e.target.files[0]);
   if (id === 'jfo') { S.filters.fo = e.target.checked; render(); }
+  if (id === 'js-lv') { S.filters.lv = e.target.value; render(); }
+  if (id === 'js-dist') { S.filters.dist = e.target.value; render(); }
   if (id === 'jcb') { S.filters.cb = e.target.checked; render(); }
   if (S.quiz && e.target.name && /^q\d+$/.test(e.target.name)) { S.quiz.ans[+e.target.name.slice(1)] = +e.target.value; try { localStorage.setItem('kaam-quiz-' + S.quiz.skill, JSON.stringify(S.quiz.ans)); } catch (x) {} }
 });
@@ -1077,6 +1127,12 @@ function loadDraft(k) { try { return JSON.parse(localStorage.getItem('kaam-quiz-
 
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const p = me();
+  if (f.id === 'hs' || f.id === 'js') {
+    S.filters.q = ($('#' + f.id + '-q').value || '').trim();
+    if (f.id === 'hs') { S.homeSearch = true; render(); const r = $('#homeResults'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    else render();
+    return;
+  }
   if (f.id === 'practiceForm' && S.practice) {
     const P = S.practice; if (P.qs.some((_, i) => P.ans[i] == null)) { $('#practiceErr').textContent = 'Answer all ' + P.qs.length + ' questions first.'; return; }
     P.result = Math.round(P.qs.filter((q, i) => P.ans[i] === q.a).length / P.qs.length * 100); render(); window.scrollTo(0, 0); return;
@@ -1152,7 +1208,7 @@ document.addEventListener('submit', async e => {
     const d = readDraft(); if (!d.title) { $('#postErr').textContent = 'Add a job title.'; return; }
     if (!SK.some(k => d.skills[k] > 0)) { $('#postErr').textContent = 'Set at least one skill above 0 so Kaam can rank applicants.'; return; }
     const id = nid('j');
-    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...d, status: 'open', at: Date.now() })) { S.draft = null; S.selJob = id; toast('Job published. Jobseekers can see it now.'); go('employer'); }
+    if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...d, status: 'open', at: Date.now() })) { S.draft = null; S.selJob = id; toast('Job published. Jobseekers can see it now.'); go('job-review'); }
   }
   if (f.id === 'chatForm') {
     const inp = $('#chatIn'); const q = inp.value.trim(); if (!q || S.busy || !S.sample) return;
