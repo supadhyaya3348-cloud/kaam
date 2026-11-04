@@ -236,6 +236,8 @@ const FREELANCE = [
   ['Fiverr','https://www.fiverr.com', ['Create a seller account','Make one gig with a clear title, price and three samples','Reply to messages quickly','Ask happy buyers for a review']],
   ['Freelancer.com','https://www.freelancer.com', ['Sign up and verify your account','Fill in your skills and portfolio','Bid on small projects first','Deliver on time to build ratings']]
 ];
+const JOB_TYPES = [['full','Full-time'],['part','Part-time']];
+const typeTag = j => j.type === 'part' ? '<span class="tag">Part-time</span>' : j.type === 'full' ? '<span class="tag">Full-time</span>' : '';
 const KTM = ['kathmandu','lalitpur','bhaktapur'];
 const TOPICS = { interview:'Interview practice', cv:'CV review', hiring:'Hiring for skills, not degrees', jobpost:'Writing a fair job post', interviewing:'Running fair interviews', training:'Training new staff', retention:'Keeping good staff' };
 const topicName = k => SKILLS[k] ? SKILLS[k].name : TOPICS[k] || k;
@@ -249,7 +251,7 @@ function reqCheck(cv, reqs) {
 function searchJobs(f, list) {
   const words = String(f.q || '').toLowerCase().split(/\s+/).filter(Boolean);
   return (list || jobList()).filter(j => {
-    if (f.fo && !j.femaleOnly) return false; if (f.cb && !j.careerBreak) return false;
+    if (f.type && j.type !== f.type) return false;
     if (f.lv && j.level !== f.lv) return false; if (f.dist && String(j.district || '').toLowerCase() !== f.dist.toLowerCase()) return false;
     if (!words.length) return true;
     const hay = [j.title, j.company, j.district, j.desc, ...(j.requirements || []), ...((j.extra || []).map(x => x.name)), ...SK.filter(k => (+(j.skills || {})[k] || 0) >= 2).map(k => SKILLS[k].name), j.level && LEVELS[j.level] ? LEVELS[j.level].label : ''].join(' ').toLowerCase();
@@ -264,9 +266,8 @@ function searchBar(id, extra) {
     ${extra ? `<div class="row" style="gap:10px">
       <label for="${id}-lv" style="flex:0 1 180px">Level<select id="${id}-lv"><option value="">All levels</option>${Object.keys(LEVELS).map(l => `<option value="${l}" ${f.lv === l ? 'selected' : ''}>${esc(LEVELS[l].label)}</option>`).join('')}</select></label>
       <label for="${id}-dist" style="flex:0 1 180px">District<select id="${id}-dist"><option value="">Anywhere</option>${dists.map(d => `<option ${f.dist === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
-      <label class="check" for="jfo"><input type="checkbox" id="jfo" ${f.fo ? 'checked' : ''}> Female-only</label>
-      <label class="check" for="jcb"><input type="checkbox" id="jcb" ${f.cb ? 'checked' : ''}> Career-break friendly</label>
-      ${f.q || f.lv || f.dist || f.fo || f.cb ? '<button class="btn ghost sm" type="button" data-act="clearSearch">Clear</button>' : ''}</div>` : ''}</form>`;
+      <label for="${id}-type" style="flex:0 1 180px">Job type<select id="${id}-type"><option value="">Any type</option>${JOB_TYPES.map(([v, l]) => `<option value="${v}" ${f.type === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      ${f.q || f.lv || f.dist || f.type ? '<button class="btn ghost sm" type="button" data-act="clearSearch">Clear</button>' : ''}</div>` : ''}</form>`;
 }
 const jobReqs = j => [...((j && j.requirements) || []), ...((j && j.extra) || []).filter(x => x.w > 0).map(x => x.name)];
 function redact(cv, prof) {
@@ -294,7 +295,7 @@ const NE = {
 };
 
 // ---------- state ----------
-const S = { uid:null, db:null, sample:null, local:false, lang:'en', route:'home', profiles:{}, jobs:{}, apps:{}, ments:{}, priv:{}, selJob:null, quiz:null, chat:[], busy:false, filters:{q:'',fo:false,cb:false,lv:'',dist:''}, flow:'level', pick:null, cvDraft:'', cvName:'', cvMsg:'', target:null };
+const S = { uid:null, db:null, sample:null, local:false, lang:'en', route:'home', profiles:{}, jobs:{}, apps:{}, ments:{}, priv:{}, selJob:null, quiz:null, chat:[], busy:false, filters:{q:'',type:'',lv:'',dist:''}, flow:'level', pick:null, cvDraft:'', cvName:'', cvMsg:'', target:null };
 try { S.lang = localStorage.getItem('kaam-lang') || 'en'; } catch (e) {}
 const t = s => (S.lang === 'ne' && NE[s]) ? NE[s] : s;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -505,7 +506,7 @@ function homeResults() {
   const js = searchJobs(S.filters);
   return `<section class="stack" id="homeResults" style="margin-top:40px"><div class="row between"><h2 class="t-l">Jobs${S.filters.q ? ` for "${esc(S.filters.q)}"` : ''}</h2><span class="small mute">${js.length} found</span></div>
     <div class="card list">${js.length ? js.map(j => `<div class="row between"><div style="min-width:0"><b>${esc(j.title)}</b> <span class="tiny mute">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>
-      <div class="row" style="gap:6px;margin-top:3px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''}${j.demo ? '<span class="tag warm">Demo</span>' : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.femaleOnly ? '<span class="tag">Female-only</span>' : ''}</div></div>
+      <div class="row" style="gap:6px;margin-top:3px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''}${j.demo ? '<span class="tag warm">Demo</span>' : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${typeTag(j)}</div></div>
       <button class="btn sm" type="button" data-act="viewFromHome" data-id="${esc(j.id)}">${S.uid && me() && me().role === 'seeker' ? 'View' : 'Log in to apply'}</button></div>`).join('') : '<div class="empty">No jobs match. Try a shorter word, like "excel" or "Kaski".</div>'}</div></section>`;
 }
 
@@ -606,7 +607,7 @@ function nextStepFor(p) {
 function jobRow(j, p, btn) {
   const m = match(p, j); const applied = Object.values(S.apps).some(a => a.uid === S.uid && a.jobId === j.id);
   return `<div class="row between"><div style="min-width:0"><b>${esc(j.title)}</b> <span class="tiny mute">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>
-    <div class="row" style="gap:6px;margin-top:3px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)} · ${esc(LEVELS[j.level].name)}</span>` : ''}${j.sample ? '<span class="tag">Sample job</span>' : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.femaleOnly ? '<span class="tag">Female-only</span>' : ''}${j.careerBreak ? '<span class="tag warm">Career-break friendly</span>' : ''}</div></div>
+    <div class="row" style="gap:6px;margin-top:3px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)} · ${esc(LEVELS[j.level].name)}</span>` : ''}${j.sample ? '<span class="tag">Sample job</span>' : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${typeTag(j)}</div></div>
     <div class="row"><b class="kv">Match ${m}</b>${btn ? `${applied ? '<span class="tag base">Applied</span>' : ''}<button class="btn sm ${applied ? 'ghost' : ''}" type="button" data-act="openJob" data-id="${esc(j.id)}">View</button>` : ''}</div></div>`;
 }
 function sessionRow(m) {
@@ -704,9 +705,9 @@ function vJobs() {
 }
 function jobDetail(j, p) {
   const sc = scoresOf(p); const m = match(p, j); const applied = Object.values(S.apps).find(a => a.uid === S.uid && a.jobId === j.id);
-  const blocked = j.femaleOnly && p.gender !== 'woman'; const need = SK.filter(k => (+j.skills[k] || 0) > 0); const missing = need.filter(k => sc[k] == null);
+  const blocked = false; const need = SK.filter(k => (+j.skills[k] || 0) > 0); const missing = need.filter(k => sc[k] == null);
   return `<div class="card hl stack" style="--accent:var(--ridge)"><div class="row between"><h2 class="t-m">${esc(j.title)}</h2><button class="btn ghost sm" type="button" data-act="closeJob">Close</button></div>
-    <div class="mute small">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}</div>
+    <div class="mute small">${esc(j.company || '')}${j.district ? ' · ' + esc(j.district) : ''}${j.type ? ' · ' + (j.type === 'part' ? 'Part-time' : 'Full-time') : ''}</div>
     <p style="margin:0;white-space:pre-wrap">${esc(j.desc || '')}</p>
     ${(j.extra || []).filter(x => x.w > 0).length ? `<div class="stack" style="gap:6px"><b>Other skills wanted</b><div class="row" style="gap:6px">${j.extra.filter(x => x.w > 0).map(x => `<span class="tag">${esc(x.name)} · ${x.w} of 5</span>`).join('')}</div></div>` : ''}
     ${(j.requirements || []).length ? `<div class="stack" style="gap:6px"><b>Requirements</b><ul class="reqs small">${j.requirements.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
@@ -920,7 +921,7 @@ function applicantsBlock(j) {
       ${drop ? '<div class="banner b-warn small">Candidates from outside the Kathmandu valley drop at shortlist. Check whether every skill weight is really needed.</div>' : '<div class="tiny mute">Totals only. CareerCamp never shows these details for one candidate.</div>'}</div></div>`;
 }
 function vPost() {
-  const p = me(); const d = S.draft || { title:'', desc:'', requirements:[], level:'fresher', skills:{ excel:3, service:3, english:2, digital:1 }, blind:true, femaleOnly:false, careerBreak:true };
+  const p = me(); const d = S.draft || { title:'', desc:'', requirements:[], level:'fresher', skills:{ excel:3, service:3, english:2, digital:1 }, blind:true, type:'full' };
   return `<section class="stack" style="max-width:760px"><h1 class="t-l">${esc(t('Post a job'))}</h1>
     <form id="postForm" class="card stack" novalidate>
       <label for="pj-title">Job title<input type="text" id="pj-title" required value="${esc(d.title)}" placeholder="e.g. Sales associate"></label>
@@ -935,10 +936,11 @@ function vPost() {
         ${SK.map(k => `<label for="pj-w-${k}" class="row between" style="flex-direction:row;font-weight:400"><span>${esc(SKILLS[k].name)}</span><span class="row"><input type="range" id="pj-w-${k}" min="0" max="5" step="1" value="${+d.skills[k] || 0}" style="width:160px;accent-color:var(--gold)"><b class="kv" id="pj-wv-${k}">${+d.skills[k] || 0}</b></span></label>`).join('')}
         ${(d.extra || []).map((x, i) => `<div class="xrow"><input type="text" id="pj-xn-${i}" value="${esc(x.name)}" aria-label="Skill name" maxlength="40"><span class="row"><input type="range" id="pj-xw-${i}" min="0" max="5" step="1" value="${+x.w || 0}" style="width:160px;accent-color:var(--gold)" aria-label="How much ${esc(x.name)} matters"><b class="kv" id="pj-xwv-${i}">${+x.w || 0}</b><button class="btn ghost sm" type="button" data-act="rmExtra" data-i="${i}" aria-label="Remove ${esc(x.name)}">Remove</button></span></div>`).join('')}
         ${(d.extra || []).length < 6 ? `<div class="xrow" style="border-top:1px dashed var(--line);padding-top:10px"><input type="text" id="pj-xnew" placeholder="Add another skill, e.g. Tally, Canva, Driving licence" maxlength="40" aria-label="New skill"><button class="btn ghost sm" type="button" data-act="addExtra" style="border-color:var(--gold);color:var(--gold)">+ Add skill</button></div><span class="tiny mute">Extra skills are checked against each applicant's CV. The four core skills are also tested in the mock assessment.</span>` : ''}</fieldset>
-      <fieldset class="stack" style="border:1px solid var(--line);border-radius:10px;padding:12px"><legend class="lbl" style="padding:0 6px">Fair hiring options</legend>
+      <fieldset class="stack" style="border:1px solid var(--line);border-radius:10px;padding:12px"><legend class="lbl" style="padding:0 6px">Fair hiring</legend>
         <label class="check" for="pj-blind"><input type="checkbox" id="pj-blind" ${d.blind ? 'checked' : ''}> Blind hiring: hide names, gender and district until I select</label>
-        <label class="check" for="pj-fo"><input type="checkbox" id="pj-fo" ${d.femaleOnly ? 'checked' : ''}> Female-only hiring</label>
-        <label class="check" for="pj-cb"><input type="checkbox" id="pj-cb" ${d.careerBreak ? 'checked' : ''}> Open to career-break applicants</label></fieldset>
+</fieldset>
+      <fieldset class="row" style="border:1px solid var(--line);border-radius:10px;padding:12px;gap:10px"><legend class="lbl" style="padding:0 6px">Job type</legend>
+        ${JOB_TYPES.map(([v, l]) => `<label class="q" for="pj-t-${v}" style="flex:1 1 160px"><input type="radio" name="pjtype" id="pj-t-${v}" value="${v}" ${(d.type || 'full') === v ? 'checked' : ''}><span><b>${l}</b></span></label>`).join('')}</fieldset>
       <p class="small" id="postErr" role="alert" style="margin:0;color:var(--warn)"></p>
       <div><button class="btn" type="submit" style="--accent:var(--gold)">Publish job</button></div></form></section>`;
 }
@@ -1231,7 +1233,7 @@ document.addEventListener('click', async e => {
   if (act === 'rmExtra') { S.draft = readDraft(); S.draft.extra.splice(+el.dataset.i, 1); render(); return; }
   if (act === 'revApp') { S.selApp = el.dataset.id; const a = S.apps[el.dataset.id]; if (a) S.selJob = a.jobId; go('candidate'); window.scrollTo(0, 0); return; }
   if (act === 'openNotif') { if (el.dataset.job) S.selJob = el.dataset.job; if (el.dataset.app) S.selApp = el.dataset.app; go(el.dataset.app && el.dataset.href === 'employer' ? 'candidate' : el.dataset.href || 'home'); return; }
-  if (act === 'clearSearch') { S.filters = { q: '', fo: false, cb: false, lv: '', dist: '' }; render(); return; }
+  if (act === 'clearSearch') { S.filters = { q: '', type: '', lv: '', dist: '' }; render(); return; }
   if (act === 'viewFromHome') { const p2 = me(); S.selJob = el.dataset.id; if (S.uid && p2 && p2.role === 'seeker') { go('jobs'); window.scrollTo(0, 0); } else if (S.uid && p2 && p2.role === 'employer') toast('Switch to a jobseeker account to apply.'); else { S.authMode = 'signup'; needLogin('startClimb'); } return; }
   if (act === 'practice') { const a = S.apps[el.dataset.id]; if (!a) return; S.practice = { appId: a.id, jobId: a.jobId, qs: practiceQs(S.jobs[a.jobId]), ans: {}, result: null }; go('practice'); window.scrollTo(0, 0); return; }
   if (act === 'practiceAgain' && S.practice) { S.practice.ans = {}; S.practice.result = null; render(); window.scrollTo(0, 0); return; }
@@ -1263,7 +1265,7 @@ document.addEventListener('click', async e => {
   if (act === 'openJob') { S.selJob = el.dataset.id; if (S.route !== 'jobs') go('jobs'); else render(); window.scrollTo(0, 0); }
   if (act === 'closeJob') { S.selJob = null; render(); }
   if (act === 'targetJob') { const j = S.jobs[el.dataset.id]; if (j) { S.target = { jobId: j.id, title: j.title }; S.flow = 'target'; go('climb'); render(); } }
-  if (act === 'apply' && p) { const j = S.jobs[el.dataset.id]; if (!j) return; if (j.femaleOnly && p.gender !== 'woman') return toast('This job is open to women only.'); const id = nid('a'); const cv = S.priv.cv && S.priv.cv.text; if (await save('apps', id, { id, jobId: j.id, uid: S.uid, status: 'applied', at: Date.now(), ...(cv ? { cv } : {}) })) toast(j.sample ? 'Applied. Demo job: you are shortlisted straight away. Check Notifications.' : 'Applied. The employer reviews your skills and CV.'); }
+  if (act === 'apply' && p) { const j = S.jobs[el.dataset.id]; if (!j) return; const id = nid('a'); const cv = S.priv.cv && S.priv.cv.text; if (await save('apps', id, { id, jobId: j.id, uid: S.uid, status: 'applied', at: Date.now(), ...(cv ? { cv } : {}) })) toast(j.sample ? 'Applied. Demo job: you are shortlisted straight away. Check Notifications.' : 'Applied. The employer reviews your skills and CV.'); }
   if (act === 'toggleMentor' && p) { if (await save('profiles', S.uid, { mentor: !p.mentor }, true)) toast(p.mentor ? 'You are no longer listed as a mentor.' : 'You are now listed as a mentor.'); }
   if (act === 'mentAns') { const m = S.ments[el.dataset.id]; if (m && await save('mentorships', m.id, { status: el.dataset.s }, true)) toast(el.dataset.s === 'accepted' ? 'Session accepted. Use Join video call at the agreed time.' : el.dataset.s === 'done' ? 'Session marked done.' : 'Session declined.'); }
   if (act === 'joinFellow' && p) { if (await save('profiles', S.uid, { fellow: { week: 1 } }, true)) toast('Welcome to the fellowship. Week 1 starts now.'); }
@@ -1293,10 +1295,9 @@ document.addEventListener('change', e => {
   if (id === 'cvFile') handleFile(e.target.files && e.target.files[0]);
   if (id === 'bj') { S.brainJob = e.target.value; render(); }
   if (id === 'exFile' && e.target.files && e.target.files[0]) { const f = e.target.files[0]; S.exDraft = ($('#ex-text') || {}).value || ''; S.exMsg = 'Reading ' + esc(f.name) + '…'; render(); readCV(f).then(t => { S.exDraft = t.replace(/[ \t]+/g, ' ').trim().slice(0, 8000); S.exMsg = 'Read ' + esc(f.name) + '. Pick how they turned out, then add.'; render(); }).catch(err => { S.exMsg = esc(err && err.message && err.message !== 'load' ? err.message : 'Could not read this file. Paste the text instead.'); render(); }); }
-  if (id === 'jfo') { S.filters.fo = e.target.checked; render(); }
+  if (id === 'js-type') { S.filters.type = e.target.value; render(); }
   if (id === 'js-lv') { S.filters.lv = e.target.value; render(); }
   if (id === 'js-dist') { S.filters.dist = e.target.value; render(); }
-  if (id === 'jcb') { S.filters.cb = e.target.checked; render(); }
   if (S.quiz && e.target.name && /^q\d+$/.test(e.target.name)) { S.quiz.ans[+e.target.name.slice(1)] = +e.target.value; try { localStorage.setItem('kaam-quiz-' + S.quiz.skill, JSON.stringify(S.quiz.ans)); } catch (x) {} }
 });
 function loadDraft(k) { try { return JSON.parse(localStorage.getItem('kaam-quiz-' + k)) || {}; } catch (e) { return {}; } }
@@ -1419,7 +1420,7 @@ function readCrit() {
 function readDraft() {
   const sk = {}; SK.forEach(k => sk[k] = +($('#pj-w-' + k) || { value: 0 }).value);
   const lvIn = document.querySelector('input[name=pjlv]:checked');
-  return { title: $('#pj-title').value.trim(), district: $('#pj-district').value.trim(), desc: $('#pj-desc').value.trim(), extra: [...document.querySelectorAll('[id^="pj-xn-"]')].map(el => ({ name: el.value.trim().slice(0, 40), w: +(($('#pj-xw-' + el.id.slice(6)) || { value: 3 }).value) })).filter(x => x.name), requirements: (($('#pj-req') || { value: '' }).value || '').split('\n').map(x => x.trim().slice(0, 120)).filter(Boolean).slice(0, 8), level: lvIn && LEVELS[lvIn.value] ? lvIn.value : 'fresher', skills: sk, blind: $('#pj-blind').checked, femaleOnly: $('#pj-fo').checked, careerBreak: $('#pj-cb').checked };
+  return { title: $('#pj-title').value.trim(), district: $('#pj-district').value.trim(), desc: $('#pj-desc').value.trim(), extra: [...document.querySelectorAll('[id^="pj-xn-"]')].map(el => ({ name: el.value.trim().slice(0, 40), w: +(($('#pj-xw-' + el.id.slice(6)) || { value: 3 }).value) })).filter(x => x.name), requirements: (($('#pj-req') || { value: '' }).value || '').split('\n').map(x => x.trim().slice(0, 120)).filter(Boolean).slice(0, 8), level: lvIn && LEVELS[lvIn.value] ? lvIn.value : 'fresher', skills: sk, blind: $('#pj-blind').checked, type: ((document.querySelector('input[name=pjtype]:checked') || {}).value) === 'part' ? 'part' : 'full' };
 }
 async function aiImprove() {
   if (!S.sample || S.busy) return; const d = readDraft(); if (!d.title) { $('#postErr').textContent = 'Add a job title first, then improve it with AI.'; return; }
@@ -1483,10 +1484,10 @@ function makeSample() {
 // ---------- device-only mode (when the server is unreachable) ----------
 const LOCAL_KEY = 'kaam-local-v1';
 const LOCAL_SAMPLES = [
-  { id:'sample-shop-assistant', owner:'sample', sample:true, company:'Sample employer', title:'Shop assistant', district:'Kaski', level:'fresher', desc:'Help customers find products, keep shelves tidy and record daily sales in a simple sheet. Training is given. First-time jobseekers are welcome.', skills:{ excel:2, service:5, english:2, digital:1 }, blind:true, femaleOnly:false, careerBreak:true, status:'open', at:1793700000000 },
-  { id:'sample-data-entry', owner:'sample', sample:true, company:'Sample employer', title:'Data entry assistant', district:'Remote', level:'fresher', desc:'Enter and clean product and order data in spreadsheets. Work from home with flexible hours. Women returning after a career break are encouraged to apply.', skills:{ excel:5, service:1, english:3, digital:3 }, blind:true, femaleOnly:true, careerBreak:true, status:'open', at:1793700001000 },
-  { id:'sample-front-desk', owner:'sample', sample:true, company:'Sample employer', title:'Front desk trainee', district:'Kathmandu', level:'fresher', desc:'Greet visitors, answer phone and email enquiries, and keep the visitor log up to date. Clear spoken English and a friendly manner matter most.', skills:{ excel:1, service:4, english:5, digital:2 }, blind:true, femaleOnly:false, careerBreak:false, status:'open', at:1793700002000 },
-  { id:'sample-support-agent', owner:'sample', sample:true, company:'Sample employer', title:'Online support agent', district:'Remote', level:'mid', desc:'Answer customer chats for an online shop, spot scam messages and escalate refund requests to the manager.', skills:{ excel:2, service:5, english:4, digital:4 }, blind:true, femaleOnly:false, careerBreak:true, status:'open', at:1793700003000 }
+  { id:'sample-shop-assistant', owner:'sample', sample:true, company:'Sample employer', title:'Shop assistant', district:'Kaski', level:'fresher', desc:'Help customers find products, keep shelves tidy and record daily sales in a simple sheet. Training is given. First-time jobseekers are welcome.', skills:{ excel:2, service:5, english:2, digital:1 }, blind:true, type:'full', status:'open', at:1793700000000 },
+  { id:'sample-data-entry', owner:'sample', sample:true, company:'Sample employer', title:'Data entry assistant', district:'Remote', level:'fresher', desc:'Enter and clean product and order data in spreadsheets. Work from home with flexible hours. Women returning after a career break are encouraged to apply.', skills:{ excel:5, service:1, english:3, digital:3 }, blind:true, type:'part', status:'open', at:1793700001000 },
+  { id:'sample-front-desk', owner:'sample', sample:true, company:'Sample employer', title:'Front desk trainee', district:'Kathmandu', level:'fresher', desc:'Greet visitors, answer phone and email enquiries, and keep the visitor log up to date. Clear spoken English and a friendly manner matter most.', skills:{ excel:1, service:4, english:5, digital:2 }, blind:true, type:'full', status:'open', at:1793700002000 },
+  { id:'sample-support-agent', owner:'sample', sample:true, company:'Sample employer', title:'Online support agent', district:'Remote', level:'mid', desc:'Answer customer chats for an online shop, spot scam messages and escalate refund requests to the manager.', skills:{ excel:2, service:5, english:4, digital:4 }, blind:true, type:'part', status:'open', at:1793700003000 }
 ];
 function persistLocal() { if (!S.local) return; try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ profiles:S.profiles, jobs:S.jobs, apps:S.apps, ments:S.ments, priv:S.priv })); } catch (e) {} }
 function loadLocal() {

@@ -348,6 +348,7 @@ window.KAAM_NE = (() => {
     'Found in CV or work samples.': 'CV वा कामका नमुनामा भेटियो।', 'Partly shown.': 'आंशिक रूपमा देखिएको।', 'Not shown in CV or work samples.': 'CV वा कामका नमुनामा देखिएन।',
     'Shown clearly in their CV or work.': 'उनको CV वा काममा स्पष्ट देखिन्छ।', 'Your great hires talked about this; weaker applicants did not.': 'तपाईंका उत्कृष्ट कर्मचारीले यसबारे लेखेका थिए; कमजोर आवेदकले लेखेनन्।',
     'Verified score of 60 or more on CareerCamp.': 'CareerCamp मा ६० वा बढी प्रमाणित अंक।', 'Criterion name': 'मापदण्डको नाम', 'Weight': 'महत्त्व', 'What strong evidence looks like': 'बलियो प्रमाण कस्तो देखिन्छ', 'Remove criterion': 'मापदण्ड हटाउनुहोस्',
+    'Job type': 'जागिरको प्रकार', 'Any type': 'जुनसुकै प्रकार', 'Full-time': 'पूर्णकालीन', 'Part-time': 'आंशिक समय', 'Fair hiring': 'निष्पक्ष भर्ना',
     'Candidate': 'उम्मेदवार', 'Climber': 'आरोही'
   };
 
