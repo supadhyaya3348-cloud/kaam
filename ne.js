@@ -363,6 +363,7 @@ window.KAAM_NE = (() => {
     'Editing past applicant:': 'पुरानो आवेदक सम्पादन हुँदै:', 'Past applicant updated. Use "Learn again from examples" to refresh the criteria.': 'पुरानो आवेदक अद्यावधिक भयो। मापदण्ड ताजा गर्न "उदाहरणबाट फेरि सिक्नुहोस्" थिच्नुहोस्।',
     'Edit job': 'जागिर सम्पादन', '← Back to applicants': '← आवेदकमा फर्कनुहोस्', 'Job updated.': 'जागिर अद्यावधिक भयो।', 'Job updated. Creating its work simulation…': 'जागिर अद्यावधिक भयो। यसको कामको सिमुलेसन बन्दैछ…',
     'Changes show to jobseekers straight away. Applicants keep their place in the pipeline.': 'परिवर्तन जागिर खोज्नेलाई तुरुन्तै देखिन्छ। आवेदकहरू आफ्नै चरणमा रहन्छन्।',
+    'This is a sample job. Saving publishes your edited version as your own job.': 'यो नमुना जागिर हो। सेभ गर्दा तपाईंको सम्पादित संस्करण तपाईंकै जागिरको रूपमा प्रकाशित हुन्छ।',
     'Closed': 'बन्द', 'Closes today': 'आज बन्द हुन्छ', 'Closes tomorrow': 'भोलि बन्द हुन्छ', 'Closes in # days': '# दिनमा बन्द हुन्छ', 'Application deadline': 'आवेदनको अन्तिम मिति',
     'The job closes automatically at the end of this day. No new applications after that.': 'यो दिनको अन्त्यमा जागिर आफैं बन्द हुन्छ। त्यसपछि नयाँ आवेदन लिइँदैन।',
     'Applications are closed. The deadline for this job has passed.': 'आवेदन बन्द भयो। यो जागिरको अन्तिम मिति नाघिसक्यो।', 'Applications are closed for this job.': 'यो जागिरको आवेदन बन्द छ।',

@@ -1,7 +1,7 @@
 // Kaam service worker: keeps the app itself available offline.
 // The page saves each user's roadmap and courses in the browser (see "offline" in index.html);
 // this worker only makes sure the page, fonts and script libraries still load with no connection.
-const CACHE = 'kaam-shell-v10';
+const CACHE = 'kaam-shell-v11';
 const SHELL = ['/', '/index.html', '/ne.js'];
 
 self.addEventListener('install', e => {
