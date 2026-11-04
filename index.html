@@ -455,7 +455,6 @@ function vHome() {
         <button class="btn" type="button" data-act="startClimb" style="--accent:var(--text)">${esc(t('Start my climb'))}</button>
         <button class="btn ghost" type="button" data-act="startHire">${esc(t('I\'m hiring'))}</button>
       </div>
-      ${searchBar('hs', false)}
       ${p && p.role ? `<div class="banner b-info">Welcome back, ${esc(p.name)}. <a href="#${p.role === 'employer' ? 'employer' : 'dashboard'}">Open your dashboard</a></div>` : ''}
     </div>
     <div class="heroart" role="img" aria-label="A Himalayan night scene with a tent at base camp">
@@ -463,7 +462,6 @@ function vHome() {
       <div class="cap"><div class="tiername" style="--accent:var(--base);font-size:24px">BASE CAMP</div><div class="small">Every climb starts here</div></div>
     </div>
   </section>
-  ${S.homeSearch ? homeResults() : ''}
   <section class="stack" style="margin-top:56px">
     <h2 class="t-l">Three cards, one climb</h2>
     <div class="grid g3">${tierCard('fresher')}${tierCard('mid')}${tierCard('senior')}</div>
