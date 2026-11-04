@@ -399,7 +399,20 @@ async function save(col, id, data, merge) {
   if (S.api) {
     const doc = merge ? { ...(store(col)[id] || {}), ...data } : data;
     try { const r = await api('/api/save', { col, id, data: doc }); store(col)[id] = r.doc; render(); return true; }
-    catch (e) { if (e.message === 'login_required') { S.uid = null; needLogin(); return false; } toast(e.message === 'already_applied' ? 'You already applied to this job.' : e.message === 'job_closed' ? 'Applications are closed for this job. The deadline has passed.' : e.message === 'bad_deadline' ? 'Pick a valid application deadline.' : e.message === 'forbidden' ? 'You cannot change that.' : 'Could not save. Check your connection and try again.'); return false; }
+    catch (e) {
+      // "forbidden" on your own profile means this tab's account is out of date (for example, another
+      // account logged in from a different tab). Re-check who is logged in, refresh, and retry once.
+      if (e.message === 'forbidden' && col === 'profiles' && id === S.uid && !save.retry) {
+        try {
+          const a = await api('/api/auth');
+          if (!a.user) { S.uid = null; needLogin(); return false; }
+          if (a.user.id !== S.uid) {
+            S.uid = a.user.id; S.email = a.user.email; await pull();
+            save.retry = true; try { return await save(col, S.uid, data, merge); } finally { save.retry = false; }
+          }
+        } catch (x) {}
+      }
+      if (e.message === 'login_required') { S.uid = null; needLogin(); return false; } toast(e.message === 'already_applied' ? 'You already applied to this job.' : e.message === 'job_closed' ? 'Applications are closed for this job. The deadline has passed.' : e.message === 'bad_deadline' ? 'Pick a valid application deadline.' : e.message === 'forbidden' ? 'You cannot change that.' : 'Could not save. Check your connection and try again.'); return false; }
   }
   const st = store(col); st[id] = merge ? { ...(st[id] || {}), ...data, id } : { ...data, id }; persistLocal(); render(); return true;
 }
@@ -620,7 +633,7 @@ function profileForm(role, p) {
       ${role === 'employer' ? `<label for="f-company">Company name<input type="text" id="f-company" required value="${esc(p.company || '')}"></label>` : ''}
       <label for="f-district">District<input type="text" id="f-district" list="districts" required value="${esc(p.district || '')}" placeholder="e.g. Kaski"></label>
       <datalist id="districts"><option>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option><option>Kaski</option><option>Chitwan</option><option>Morang</option><option>Rupandehi</option><option>Jhapa</option><option>Banke</option><option>Kailali</option><option>Dhanusha</option><option>Sunsari</option></datalist>
-      ${role === 'seeker' ? `<label for="f-gender">Gender (used only for female-only jobs and fair hiring totals)<select id="f-gender">
+      ${role === 'seeker' ? `<label for="f-gender">Gender (optional, used only for anonymous fair hiring totals)<select id="f-gender">
         ${['woman','man','another gender','prefer not to say'].map(g => `<option value="${g}" ${p.gender === g ? 'selected' : ''}>${g[0].toUpperCase() + g.slice(1)}</option>`).join('')}</select></label>
       <label class="check" for="f-break"><input type="checkbox" id="f-break" ${p.careerBreak ? 'checked' : ''}> I am returning to work after a career break</label>` : ''}
       <p class="tiny" id="formErr" role="alert" style="margin:0;color:var(--warn)"></p>

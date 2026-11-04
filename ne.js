@@ -55,7 +55,7 @@ window.KAAM_NE = (() => {
     'Are you a fresher, mid-level, or looking for senior roles? Tap a card to turn it over.': 'तपाईं फ्रेसर, मध्यम तह, वा वरिष्ठ पद खोज्दै हुनुहुन्छ? कार्ड पल्टाउन थिच्नुहोस्।',
     'You can climb to the next card later by passing skill checks.': 'सीप जाँच पास गरेर पछि अर्को कार्डमा चढ्न सक्नुहुन्छ।', 'Choose one card to continue.': 'अगाडि बढ्न एउटा कार्ड छान्नुहोस्।',
     'Your name, gender and district are never shown to employers until they select you.': 'छनोट नभएसम्म तपाईंको नाम, लिङ्ग र जिल्ला रोजगारदाताले देख्दैनन्।',
-    'Your name': 'तपाईंको नाम', 'District': 'जिल्ला', 'Gender (used only for female-only jobs and fair hiring totals)': 'लिङ्ग (महिलाका लागि मात्र जागिर र निष्पक्ष भर्ना तथ्याङ्कमा मात्र प्रयोग हुन्छ)',
+    'Your name': 'तपाईंको नाम', 'District': 'जिल्ला', 'Gender (optional, used only for anonymous fair hiring totals)': 'लिङ्ग (ऐच्छिक, नाम नखुल्ने निष्पक्ष भर्ना तथ्याङ्कका लागि मात्र)',
     'Woman': 'महिला', 'Man': 'पुरुष', 'Another gender': 'अन्य लिङ्ग', 'Prefer not to say': 'भन्न चाहन्न', 'I am returning to work after a career break': 'म करियर ब्रेकपछि काममा फर्किंदैछु',
     'Continue': 'अगाडि बढ्नुहोस्', 'Save profile': 'प्रोफाइल सेभ गर्नुहोस्', 'Fill in your name, district.': 'आफ्नो नाम र जिल्ला भर्नुहोस्।', 'Fill in your name, district': 'आफ्नो नाम, जिल्ला',
     'Fill in your name, district and company name.': 'आफ्नो नाम, जिल्ला र कम्पनीको नाम भर्नुहोस्।',
