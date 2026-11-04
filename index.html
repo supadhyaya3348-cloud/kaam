@@ -103,7 +103,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .banner{border-radius:10px;padding:10px 14px;font-size:14px}
 .b-info{background:var(--track)} .b-warn{background:var(--warnbg);color:var(--warn)} .b-ok{background:#DDF3EC;color:#0B5A45}
 label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:15px}
-input[type=text],input[type=url],input[type=email],input[type=password],input[type=search],input[type=number],input[type=datetime-local],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+input[type=text],input[type=url],input[type=email],input[type=password],input[type=search],input[type=number],input[type=datetime-local],input[type=date],select,textarea{background:var(--bg2);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
 textarea{min-height:110px;resize:vertical}
 .check{flex-direction:row;align-items:center;gap:10px;font-weight:400}
 .check input{width:20px;height:20px;accent-color:var(--ridge)}
@@ -1002,7 +1002,7 @@ function vEmployer() {
       <div class="row">${[['Open jobs', mine.filter(j => !isClosed(j)).length], ['Applicants', allApps.length], ['Shortlisted', count('shortlisted') + count('assessment')], ['Interview', count('interview')], ['Hired', count('selected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
     <div class="stack">
       <div class="card stack"><div class="row between"><div class="t-m">YOUR JOBS</div><a class="btn sm" style="--accent:var(--gold)" href="#post">${esc(t('Post a job'))}</a></div>
-        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''} ${deadlineTag(j)}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants${j.deadline ? ` · <span>Deadline ${esc(fmtDay(j.deadline))}</span>` : ''}</div></div><span class="row" style="gap:8px"><button class="btn ghost sm" type="button" data-act="pastApps" data-id="${esc(j.id)}">Past applicants${(brainFor(j.id).examples || []).length ? ' · ' + brainFor(j.id).examples.length : ''}</button><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></span></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
+        <div class="list">${mine.length ? mine.map(j => `<div class="row between"><div><b>${esc(j.title)}</b> ${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)}</span>` : ''} ${j.sample ? '<span class="tag">Sample</span>' : ''} ${deadlineTag(j)}<div class="tiny mute">${Object.values(S.apps).filter(a => a.jobId === j.id).length} applicants${j.deadline ? ` · <span>Deadline ${esc(fmtDay(j.deadline))}</span>` : ''}</div></div><span class="row" style="gap:8px">${j.owner === S.uid ? `<button class="btn ghost sm" type="button" data-act="editJob" data-id="${esc(j.id)}">Edit job</button>` : ''}<button class="btn ghost sm" type="button" data-act="pastApps" data-id="${esc(j.id)}">Past applicants${(brainFor(j.id).examples || []).length ? ' · ' + brainFor(j.id).examples.length : ''}</button><button class="btn sm" style="--accent:var(--gold)" type="button" data-act="selJob" data-id="${esc(j.id)}">Review applicants</button></span></div>`).join('') : '<div class="empty">Post your first job to start receiving ranked applicants.</div>'}</div></div>
     </div>
   </section>`;
 }
@@ -1011,7 +1011,7 @@ function vJobReview() {
   const j = myJob(); if (!j) return vEmployer();
   const apps = Object.values(S.apps).filter(a => a.jobId === j.id); const c = st => apps.filter(a => a.status === st).length;
   return `<section class="stack" style="gap:20px">
-    <div><a class="btn ghost sm" href="#employer">← All jobs</a></div>
+    <div class="row between"><a class="btn ghost sm" href="#employer">← All jobs</a>${j.owner === S.uid ? `<button class="btn ghost sm" type="button" data-act="editJob" data-id="${esc(j.id)}">Edit job</button>` : ''}</div>
     <div class="framed" style="--accent:var(--gold)">${gems}<div class="row between"><div class="stack" style="gap:4px"><div class="mute small">Applicants dashboard</div><h1 class="t-l">${esc(j.title)}</h1>
       <div class="row" style="gap:6px">${j.level && LEVELS[j.level] ? `<span class="tag" style="border:1px solid ${LEVELS[j.level].color};color:${LEVELS[j.level].color};background:none">${esc(LEVELS[j.level].label)} · ${esc(LEVELS[j.level].name)}</span>` : ''}${j.district ? `<span class="tag">${esc(j.district)}</span>` : ''}${j.blind ? '<span class="tag">Blind hiring</span>' : ''}${j.sample ? '<span class="tag warm">Demo job</span>' : ''}</div></div>
       <div class="row">${[['Applied', apps.length], ['Shortlisted', c('shortlisted') + c('assessment')], ['Interview', c('interview')], ['Hired', c('selected')], ['Not now', c('rejected')]].map(([l, n]) => `<div class="card" style="padding:10px 14px;background:var(--panel2)"><div class="t-l kv" style="font-size:28px">${n}</div><div class="tiny mute">${l}</div></div>`).join('')}</div></div></div>
@@ -1090,9 +1090,21 @@ function applicantsBlock(j) {
       </tbody></table></div>
       ${drop ? '<div class="banner b-warn small">Candidates from outside the Kathmandu valley drop at shortlist. Check whether every skill weight is really needed.</div>' : '<div class="tiny mute">Totals only. CareerCamp never shows these details for one candidate.</div>'}</div></div>`;
 }
+// Editing a posted job reuses the post form. The new-job draft is set aside and restored afterwards.
+const JOB_FIELDS = ['title', 'district', 'desc', 'extra', 'requirements', 'level', 'skills', 'blind', 'type', 'deadline'];
+function enterEdit(id) {
+  const j = S.jobs[id]; if (!j || j.owner !== S.uid) return;
+  if (!S.editJob) S.postDraft = S.draft;
+  S.editJob = id; S.selJob = id;
+  S.draft = { ...Object.fromEntries(JOB_FIELDS.map(k => [k, j[k]])), skills: { ...(j.skills || {}) }, extra: (j.extra || []).map(x => ({ ...x })), requirements: (j.requirements || []).slice(), autoSim: !j.sim };
+  go('edit-job'); window.scrollTo(0, 0);
+}
+function exitEdit() { S.editJob = null; S.draft = S.postDraft || null; S.postDraft = null; }
 function vPost() {
+  const ej = S.route === 'edit-job' ? (S.editJob && S.jobs[S.editJob]) : null;
+  if (S.route === 'edit-job' && !ej) return vEmployer();
   const p = me(); const d = S.draft || { title:'', desc:'', requirements:[], level:'fresher', skills:{ excel:3, service:3, english:2, digital:1 }, blind:true, type:'full' };
-  return `<section class="stack" style="max-width:760px"><h1 class="t-l">${esc(t('Post a job'))}</h1>
+  return `<section class="stack" style="max-width:760px">${ej ? `<div><a class="btn ghost sm" href="#job-review">← Back to applicants</a></div><h1 class="t-l">Edit job</h1><p class="mute" style="margin:0">Changes show to jobseekers straight away. Applicants keep their place in the pipeline.</p>` : `<h1 class="t-l">${esc(t('Post a job'))}</h1>`}
     <form id="postForm" class="card stack" novalidate>
       <label for="pj-title">Job title<input type="text" id="pj-title" required value="${esc(d.title)}" placeholder="e.g. Sales associate"></label>
       <label for="pj-district">District<input type="text" id="pj-district" list="districts2" value="${esc(d.district || p.district || '')}"></label>
@@ -1109,12 +1121,12 @@ function vPost() {
       <fieldset class="stack" style="border:1px solid var(--line);border-radius:10px;padding:12px"><legend class="lbl" style="padding:0 6px">Fair hiring</legend>
         <label class="check" for="pj-blind"><input type="checkbox" id="pj-blind" ${d.blind ? 'checked' : ''}> Blind hiring: hide names, gender and district until I select</label>
 </fieldset>
-      <label class="check" for="pj-autosim" style="align-items:flex-start"><input type="checkbox" id="pj-autosim" ${d.autoSim === false ? '' : 'checked'}> <span>Create a work simulation for this job automatically<span class="tiny mute" style="display:block;font-weight:400">CareerCamp turns your description and requirements into a short virtual day in this job. Shortlisted candidates do it before the proctored test, and you see their score for each task.</span></span></label>
+      ${ej && ej.sim ? `<div class="banner b-info small">This job's work simulation (${esc((simMeta(ej.sim) || {}).title || 'work sim')}) stays as it is, so every applicant does the same tasks.</div>` : `<label class="check" for="pj-autosim" style="align-items:flex-start"><input type="checkbox" id="pj-autosim" ${d.autoSim === false ? '' : 'checked'}> <span>Create a work simulation for this job automatically<span class="tiny mute" style="display:block;font-weight:400">CareerCamp turns your description and requirements into a short virtual day in this job. Shortlisted candidates do it before the proctored test, and you see their score for each task.</span></span></label>`}
       <label for="pj-deadline">Application deadline<input type="date" id="pj-deadline" required min="${todayNp()}" value="${esc(d.deadline || plusDays(todayNp(), 14))}"><span class="tiny mute" style="font-weight:400">The job closes automatically at the end of this day. No new applications after that.</span></label>
       <fieldset class="row" style="border:1px solid var(--line);border-radius:10px;padding:12px;gap:10px"><legend class="lbl" style="padding:0 6px">Job type</legend>
         ${JOB_TYPES.map(([v, l]) => `<label class="q" for="pj-t-${v}" style="flex:1 1 160px"><input type="radio" name="pjtype" id="pj-t-${v}" value="${v}" ${(d.type || 'full') === v ? 'checked' : ''}><span><b>${l}</b></span></label>`).join('')}</fieldset>
       <p class="small" id="postErr" role="alert" style="margin:0;color:var(--warn)"></p>
-      <div><button class="btn" type="submit" style="--accent:var(--gold)">Publish job</button></div></form></section>`;
+      <div class="row"><button class="btn" type="submit" style="--accent:var(--gold)">${ej ? 'Save changes' : 'Publish job'}</button>${ej ? '<a class="btn ghost" href="#job-review">Cancel</a>' : ''}</div></form></section>`;
 }
 
 // ---------- AI Hiring Manager ("hiring brain") ----------
@@ -1241,8 +1253,9 @@ function vBrain() {
 // ---------- render ----------
 function render() {
   const p = me(); const role = p && p.role;
-  const seekerRoutes = ['dashboard','check','jobs','sims','sim','learn','mentors','portfolio','applications','test','practice'], empRoutes = ['employer','post','ai-manager','hire-mentors','job-review','candidate'];
+  const seekerRoutes = ['dashboard','check','jobs','sims','sim','learn','mentors','portfolio','applications','test','practice'], empRoutes = ['employer','post','edit-job','ai-manager','hire-mentors','job-review','candidate'];
   let r = S.route;
+  if (r !== 'edit-job' && S.editJob) exitEdit();
   if (r === 'login' && S.api && S.uid) r = role ? (role === 'employer' ? 'employer' : 'dashboard') : 'home';
   if (r === 'login' || r === 'logout') { /* account pages */ }
   else if (r === 'alerts' && role) { /* both roles */ }
@@ -1252,7 +1265,7 @@ function render() {
   else if (!role && r !== 'home') r = 'home';
   else if (role === 'employer' && seekerRoutes.includes(r)) r = 'employer';
   else if (role === 'seeker' && empRoutes.includes(r)) r = 'dashboard';
-  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'ai-manager':vBrain, 'hire-mentors':vEmployer, 'job-review':vJobReview, candidate:vCandidate, test:vTest, practice:vPractice, sims:vSims, sim:vSim, alerts:vAlerts, login:vLogin, logout:vLogout };
+  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, 'ai-manager':vBrain, 'hire-mentors':vEmployer, 'job-review':vJobReview, 'edit-job':vPost, candidate:vCandidate, test:vTest, practice:vPractice, sims:vSims, sim:vSim, alerts:vAlerts, login:vLogin, logout:vLogout };
   const banner = S.offline ? `<div class="banner b-warn small" role="status" style="margin-bottom:16px"><b>You are offline.</b> ${S.uid ? `Showing your roadmap, courses and applications saved ${S.snapAt ? 'on ' + new Date(S.snapAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'on this device'}. Steps you tick now are kept and sync when you are back online.` : 'Connect to the internet once and log in. After that, your roadmap also opens offline.'}</div>` : '';
   $('#app').innerHTML = banner + (views[r] || vHome)();
   $('#nav').innerHTML = navHTML();
@@ -1397,6 +1410,7 @@ document.addEventListener('click', async e => {
   if (act === 'brainJob') { S.brainJob = el.dataset.id; return; }
   if (act === 'editExample') { const jid = brainJid(); const e = (brainFor(jid).examples || [])[+el.dataset.i]; if (!e) return; S.exEdit = { jid, i: +el.dataset.i, title: e.title || '', outcome: e.outcome || 'great', note: e.note || '' }; S.exDraft = e.text || ''; S.exMsg = ''; render(); const f = $('#exForm'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#ex-text').focus(); } return; }
   if (act === 'cancelEx') { S.exEdit = null; S.exDraft = ''; render(); return; }
+  if (act === 'editJob') { enterEdit(el.dataset.id); return; }
   if (act === 'pastApps') { S.brainJob = el.dataset.id; S.exEdit = null; S.exDraft = ''; go('ai-manager'); window.scrollTo(0, 0); return; }
   if (act === 'rmExample') { S.exEdit = null; S.exDraft = ''; const jid = brainJid(); const ex = (brainFor(jid).examples || []).slice(); ex.splice(+el.dataset.i, 1); await saveBrain(jid, { examples: ex }); return; }
   if (act === 'importPast') { const jid = brainJid(); const ex = (brainFor(jid).examples || []).slice();
@@ -1604,8 +1618,19 @@ document.addEventListener('submit', async e => {
     const d = readDraft(); if (!d.title) { $('#postErr').textContent = 'Add a job title.'; return; }
     if (!SK.some(k => d.skills[k] > 0)) { $('#postErr').textContent = 'Set at least one skill above 0 so CareerCamp can rank applicants.'; return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d.deadline) || d.deadline < todayNp()) { $('#postErr').textContent = 'Pick an application deadline from today onwards.'; return; }
-    const id = nid('j');
     const { autoSim, ...jd } = d;
+    const ej = S.route === 'edit-job' && S.editJob && S.jobs[S.editJob];
+    if (ej) {
+      const id = ej.id;
+      if (!(await save('jobs', id, { ...ej, ...jd, status: 'open', editedAt: Date.now() }))) return;
+      exitEdit(); S.selJob = id; go('job-review');
+      if (!autoSim || S.jobs[id].sim) { toast('Job updated.'); return; }
+      S.genSim = id; render(); toast('Job updated. Creating its work simulation…');
+      try { const r = await api('/api/sim', { action: 'generate', jobId: id }); S.jobs[id] = r.job; toast(`Work simulation ready: ${r.sim.tasks} tasks, about ${r.sim.minutes} minutes.`); }
+      catch (e) { toast('Could not create the work simulation. Try again.'); }
+      S.genSim = null; render(); return;
+    }
+    const id = nid('j');
     if (await save('jobs', id, { id, owner: S.uid, company: p.company || p.name, ...jd, status: 'open', at: Date.now() })) {
       S.draft = null; S.selJob = id;
       if (!autoSim) { toast('Job published. Jobseekers can see it now.'); go('job-review'); return; }
