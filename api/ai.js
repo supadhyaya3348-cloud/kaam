@@ -1,4 +1,4 @@
-import { send, readBody } from './_lib.js';
+import { send, readBody, userOf } from './_lib.js';
 
 // GET /api/ai -> { enabled } ; POST /api/ai { messages, json, tier } -> { text }
 // Uses the Anthropic Messages API. Set ANTHROPIC_API_KEY in Vercel to turn AI features on.
@@ -7,6 +7,10 @@ export default async function handler(req, res) {
   if (req.method === 'GET') return send(res, 200, { enabled: !!key });
   if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
   if (!key) return send(res, 503, { error: 'ai_not_configured' });
+  // Only logged-in users can spend AI credits.
+  let user = null;
+  try { user = await userOf(req); } catch (e) { console.error(e); }
+  if (!user) return send(res, 401, { error: 'login_required' });
   const body = await readBody(req);
   const { messages, json, tier } = body || {};
   const ok = Array.isArray(messages) && messages.length >= 1 && messages.length <= 20 &&

@@ -34,6 +34,13 @@ nav.main a[aria-current="page"]{background:#33245A;color:var(--text)}
 .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{border:1px solid var(--line);border-radius:99px;padding:5px 12px;background:none;cursor:pointer;color:var(--mute);font-size:14px}
 .pill[aria-pressed="true"]{background:var(--ridge);color:var(--ink);border-color:var(--ridge);font-weight:800}
+a.pill{text-decoration:none;display:inline-block}
+.acct{display:flex;gap:8px;align-items:center}
+.acct .who{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.authbox{max-width:440px;margin:0 auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:7px;background:none;color:var(--mute);font-weight:800;cursor:pointer}
+.seg button[aria-selected="true"]{background:#33245A;color:var(--text)}
 main{padding-block:28px 64px}
 h1,h2,h3{margin:0;text-wrap:balance}
 .lbl{font:700 15px var(--f-label);letter-spacing:.08em;text-transform:uppercase}
@@ -133,6 +140,7 @@ table.fair th,table.fair td{text-align:left;padding:6px 8px;border-bottom:1px so
   <div class="tools">
     <button class="pill" id="langBtn" type="button" data-act="lang">EN | नेपाली</button>
     <button class="pill" id="roleBtn" type="button" data-act="role" hidden></button>
+    <span class="acct" id="acct"></span>
   </div>
 </div></header>
 <main class="wrap" id="app" aria-live="polite"></main>
@@ -250,14 +258,16 @@ const analysis = () => S.priv.analysis || null;
 // ---------- storage ----------
 const store = col => ({ profiles:S.profiles, jobs:S.jobs, apps:S.apps, mentorships:S.ments }[col]);
 async function save(col, id, data, merge) {
+  if (S.api && !S.uid) { needLogin(); return false; }
   if (S.api) {
     const doc = merge ? { ...(store(col)[id] || {}), ...data } : data;
     try { const r = await api('/api/save', { col, id, data: doc }); store(col)[id] = r.doc; render(); return true; }
-    catch (e) { toast(e.message === 'already_applied' ? 'You already applied to this job.' : e.message === 'forbidden' ? 'You cannot change that.' : 'Could not save. Check your connection and try again.'); return false; }
+    catch (e) { if (e.message === 'login_required') { S.uid = null; needLogin(); return false; } toast(e.message === 'already_applied' ? 'You already applied to this job.' : e.message === 'forbidden' ? 'You cannot change that.' : 'Could not save. Check your connection and try again.'); return false; }
   }
   const st = store(col); st[id] = merge ? { ...(st[id] || {}), ...data, id } : { ...data, id }; persistLocal(); render(); return true;
 }
 async function savePriv(docId, data) {
+  if (S.api && !S.uid) { needLogin(); return false; }
   if (S.api) { try { const r = await api('/api/save', { col: 'private', id: docId, data }); S.priv[docId] = r.doc; render(); return true; } catch (e) { toast('Could not save. Check your connection and try again.'); return false; } }
   S.priv[docId] = data; persistLocal(); render(); return true;
 }
@@ -283,6 +293,53 @@ function skillBars(p, color) {
 function tierCard(lv) {
   const L = LEVELS[lv];
   return `<div class="framed stack" style="--accent:${L.color}">${gems}<div class="tiername">${esc(L.name.toUpperCase())}</div><div class="lbl mute">${esc(L.label)}</div><div class="mute small">${esc(L.who)}</div><div class="stack small" style="gap:6px">${L.gets.map(g => `<div>${esc(g)}</div>`).join('')}</div></div>`;
+}
+
+// ---------- views: account ----------
+function needLogin(after) { if (after) S.after = after; S.authMode = S.authMode || 'login'; toast('Log in or create an account first.'); go('login'); }
+function vLogin() {
+  const signup = S.authMode === 'signup';
+  return `<section class="authbox stack">
+    <div class="stack" style="gap:6px;text-align:center">
+      <div class="lbl" style="color:var(--pink)">${signup ? 'New to Kaam' : 'Welcome back'}</div>
+      <h1 class="t-l">${signup ? 'Create your account' : 'Log in'}</h1>
+    </div>
+    <div class="seg" role="tablist" aria-label="Log in or sign up">
+      <button type="button" role="tab" aria-selected="${!signup}" data-act="authMode" data-m="login">Log in</button>
+      <button type="button" role="tab" aria-selected="${signup}" data-act="authMode" data-m="signup">Create account</button>
+    </div>
+    <form id="authForm" class="card stack" novalidate>
+      <label for="a-email">Email<input type="email" id="a-email" required autocomplete="email" value="${esc(S.authEmail || '')}" placeholder="you@example.com"></label>
+      <label for="a-pass">Password<input type="password" id="a-pass" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+      ${signup ? `<label for="a-pass2">Confirm password<input type="password" id="a-pass2" required minlength="8" autocomplete="new-password"></label>` : ''}
+      <label class="check" for="a-show"><input type="checkbox" id="a-show"> Show password</label>
+      ${signup ? '<p class="tiny mute" style="margin:0">At least 8 characters. Your password is hashed with scrypt before it is saved, so nobody, not even Kaam, can read it.</p>' : ''}
+      <p class="tiny" id="authErr" role="alert" style="margin:0;color:var(--warn)"></p>
+      <div class="row"><button class="btn" type="submit" style="flex:1" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Please wait…' : signup ? 'Create account' : 'Log in'}</button></div>
+    </form>
+    <p class="small mute" style="text-align:center;margin:0">${signup ? 'Already have an account? <a href="#login" data-act="authMode" data-m="login">Log in</a>' : 'New here? <a href="#login" data-act="authMode" data-m="signup">Create an account</a>'}</p>
+  </section>`;
+}
+function vLogout() {
+  return `<section class="authbox stack" style="text-align:center">
+    <div class="card stack" style="align-items:center">
+      <div class="lbl" style="color:var(--base)">Logged out</div>
+      <h1 class="t-l">See you on the climb</h1>
+      <p class="mute" style="margin:0">You have logged out of Kaam on this device. Your profile, CV analysis and applications are saved to your account.</p>
+      <div class="row" style="justify-content:center"><a class="btn" href="#login" data-act="authMode" data-m="login" style="--accent:var(--text)">Log in again</a><a class="btn ghost" href="#home">Home</a></div>
+    </div>
+  </section>`;
+}
+function acctHTML() {
+  if (!S.api) return '';
+  if (S.uid) return `<span class="tiny mute who" title="${esc(S.email || '')}">${esc(S.email || '')}</span><button class="pill" type="button" data-act="logout">Log out</button>`;
+  return S.route === 'login' ? '' : `<a class="pill" href="#login" data-act="authMode" data-m="login">Log in</a>`;
+}
+function afterLogin() {
+  const p = me(); const a = S.after; S.after = null;
+  if (p && p.role) return go(p.role === 'employer' ? 'employer' : 'dashboard');
+  if (a === 'startHire') return go('company');
+  S.flow = 'level'; S.pick = null; go('climb');
 }
 
 // ---------- views: public ----------
@@ -633,15 +690,19 @@ function render() {
   const p = me(); const role = p && p.role;
   const seekerRoutes = ['dashboard','check','jobs','learn','mentors','portfolio','applications'], empRoutes = ['employer','post'];
   let r = S.route;
-  if (r === 'climb') { /* stays */ }
+  if (r === 'login' && S.api && S.uid) r = role ? (role === 'employer' ? 'employer' : 'dashboard') : 'home';
+  if (r === 'login' || r === 'logout') { /* account pages */ }
+  else if (S.api && !S.uid && r !== 'home') r = 'login';
+  else if (r === 'climb') { /* stays */ }
   else if (r === 'company') { if (role === 'employer' && p.company && !S.editCompany) r = 'employer'; }
   else if (!role && r !== 'home') r = 'home';
   else if (role === 'employer' && seekerRoutes.includes(r)) r = 'employer';
   else if (role === 'seeker' && empRoutes.includes(r)) r = 'dashboard';
-  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost };
+  const views = { home:vHome, climb:vClimb, company:() => `<section class="stack" style="max-width:640px">${profileForm('employer', p || {})}</section>`, dashboard:vDashboard, check:vCheck, jobs:vJobs, learn:vLearn, mentors:vMentors, portfolio:vPortfolio, applications:vApps, employer:vEmployer, post:vPost, login:vLogin, logout:vLogout };
   const banner = '';
   $('#app').innerHTML = banner + (views[r] || vHome)();
   $('#nav').innerHTML = navHTML();
+  $('#acct').innerHTML = acctHTML();
   const rb = $('#roleBtn'); rb.hidden = !role; if (role) rb.textContent = t(role === 'employer' ? 'Switch to jobseeker view' : 'Switch to employer view');
   $('#langBtn').setAttribute('aria-pressed', S.lang === 'ne' ? 'true' : 'false');
   document.documentElement.lang = S.lang === 'ne' ? 'ne' : 'en';
@@ -723,6 +784,14 @@ Make the steps practical for someone in Nepal with a phone and patchy internet. 
 document.addEventListener('click', async e => {
   const el = e.target.closest('[data-act]'); if (!el) return; const act = el.dataset.act; const p = me();
   if (act === 'lang') { S.lang = S.lang === 'ne' ? 'en' : 'ne'; try { localStorage.setItem('kaam-lang', S.lang); } catch (x) {} render(); }
+  if (act === 'authMode') { S.authMode = el.dataset.m === 'signup' ? 'signup' : 'login'; const em = $('#a-email'); if (em) S.authEmail = em.value; if (S.route !== 'login') go('login'); else render(); return; }
+  if (act === 'logout') {
+    try { await api('/api/auth', { action: 'logout' }); } catch (x) {}
+    S.uid = null; S.email = null; S.priv = {}; S.chat = []; S.quiz = null; S.target = null; S.cvDraft = ''; S.cvName = ''; S.cvMsg = ''; S.draft = null; S.authMode = 'login';
+    toast('Logged out.');
+    return go('logout');
+  }
+  if ((act === 'startClimb' || act === 'startHire') && S.api && !S.uid) { S.authMode = 'signup'; return needLogin(act); }
   if (act === 'startClimb') { if (p && p.role === 'seeker' && p.level) return go('dashboard'); if (p && p.level) { await save('profiles', S.uid, { role: 'seeker' }, true); return go('dashboard'); } S.flow = 'level'; S.pick = null; go('climb'); }
   if (act === 'startHire') { if (p && p.company) { await save('profiles', S.uid, { role: 'employer' }, true); return go('employer'); } go('company'); }
   if (act === 'pickLevel') {
@@ -770,6 +839,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => { if ((e.target.id || '').startsWith('pj-') && $('#postForm')) S.draft = readDraft(); });
 document.addEventListener('change', e => {
   const id = e.target.id;
+  if (id === 'a-show') document.querySelectorAll('#a-pass,#a-pass2').forEach(i => i.type = e.target.checked ? 'text' : 'password');
   if (id === 'cvFile') handleFile(e.target.files && e.target.files[0]);
   if (id === 'jfo') { S.filters.fo = e.target.checked; render(); }
   if (id === 'jcb') { S.filters.cb = e.target.checked; render(); }
@@ -779,6 +849,30 @@ function loadDraft(k) { try { return JSON.parse(localStorage.getItem('kaam-quiz-
 
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const p = me();
+  if (f.id === 'authForm') {
+    if (S.busy) return;
+    const signup = S.authMode === 'signup';
+    const email = $('#a-email').value.trim(), pass = $('#a-pass').value, err = $('#authErr');
+    S.authEmail = email;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; return; }
+    if (signup && pass.length < 8) { err.textContent = 'Use at least 8 characters for your password.'; return; }
+    if (signup && pass !== $('#a-pass2').value) { err.textContent = 'The two passwords do not match.'; return; }
+    if (!pass) { err.textContent = 'Enter your password.'; return; }
+    S.busy = true; render(); $('#a-pass') && ($('#a-pass').value = pass);
+    try {
+      const r = await api('/api/auth', { action: signup ? 'signup' : 'login', email, password: pass });
+      S.uid = r.user.id; S.email = r.user.email; S.authEmail = '';
+      try { await pull(); } catch (x) {}
+      S.busy = false;
+      toast(signup ? 'Account created. Welcome to Kaam!' : 'Logged in.');
+      afterLogin();
+    } catch (x) {
+      S.busy = false; render();
+      const msg = { email_taken: 'An account with this email already exists. Log in instead.', bad_credentials: 'Wrong email or password.', too_many_attempts: 'Too many wrong attempts. Wait 15 minutes and try again.', weak_password: 'Use at least 8 characters for your password.', bad_email: 'Enter a valid email address.' }[x.message] || 'Could not reach the server. Try again.';
+      const el2 = $('#authErr'); if (el2) el2.textContent = msg;
+    }
+    return;
+  }
   if (f.id === 'profileForm') {
     const role = $('#f-role').value, name = $('#f-name').value.trim(), district = $('#f-district').value.trim();
     const company = role === 'employer' ? $('#f-company').value.trim() : (p && p.company) || '';
@@ -857,7 +951,7 @@ async function aiImprove() {
 
 // ---------- Neon backend (Vercel /api routes) ----------
 async function api(path, body) {
-  const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', 'x-kaam-user': S.uid }, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(path, { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'http_' + r.status);
   return j;
@@ -890,13 +984,21 @@ function loadLocal() {
 }
 
 // ---------- boot ----------
+async function pull() { const d = await api('/api/state'); S.profiles = d.profiles || {}; S.jobs = d.jobs || {}; S.apps = d.apps || {}; S.ments = d.mentorships || {}; S.priv = d.priv || {}; }
 S.route = (location.hash || '#home').slice(1) || 'home';
 render();
 (async () => {
-  try { S.uid = localStorage.getItem('kaam-uid'); } catch (e) {}
-  if (!S.uid || !/^[A-Za-z0-9_-]{8,64}$/.test(S.uid)) { S.uid = 'u' + (window.crypto && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36)); try { localStorage.setItem('kaam-uid', S.uid); } catch (e) {} }
-  const pull = async () => { const d = await api('/api/state'); S.profiles = d.profiles || {}; S.jobs = d.jobs || {}; S.apps = d.apps || {}; S.ments = d.mentorships || {}; S.priv = d.priv || {}; };
-  try { await pull(); S.api = true; S.local = false; } catch (e) { S.api = false; S.local = true; loadLocal(); }
+  try {
+    const a = await api('/api/auth');
+    S.uid = a.user ? a.user.id : null; S.email = a.user ? a.user.email : null;
+    await pull(); S.api = true; S.local = false;
+  } catch (e) {
+    // Server unreachable: fall back to a device-only anonymous account.
+    S.api = false; S.local = true;
+    try { S.uid = localStorage.getItem('kaam-uid'); } catch (x) {}
+    if (!S.uid || !/^[A-Za-z0-9_-]{8,64}$/.test(S.uid)) { S.uid = 'u' + (window.crypto && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36)); try { localStorage.setItem('kaam-uid', S.uid); } catch (x) {} }
+    loadLocal();
+  }
   if (S.api) {
     try { const h = await api('/api/ai'); if (h.enabled) S.sample = makeSample(); } catch (e) {}
     setInterval(async () => {

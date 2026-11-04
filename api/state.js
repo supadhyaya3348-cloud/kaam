@@ -3,8 +3,8 @@ import { sql, userOf, send } from './_lib.js';
 // GET /api/state: everything the page needs, plus this user's private documents (CV, roadmap).
 export default async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
-  const user = userOf(req);
   try {
+    const user = await userOf(req);
     const [profiles, jobs, apps, ments, priv] = await Promise.all([
       sql`SELECT data FROM profiles`,
       sql`SELECT data FROM jobs`,

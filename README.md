@@ -52,3 +52,11 @@ can accept or decline a session.
 - Blind hiring is enforced in the interface. Profile details are still sent to the browser, so a determined user
   could read them. Next step: have `/api/state` hide names, gender and district from employers until selection.
 - Set a monthly spending limit on your Anthropic key, since `/api/ai` is open to anyone using the site.
+
+
+## Accounts and security
+- Email + password sign up and log in (`/api/auth`), plus a logout page.
+- Passwords are hashed with **scrypt** (Node's built-in crypto, random 16-byte salt per user). The plain password is never stored.
+- Logging in creates a random session token kept in an **HttpOnly, Secure, SameSite=Lax** cookie for 30 days. The database stores only a SHA-256 of the token.
+- 5 wrong passwords for one email locks that email for 15 minutes.
+- Saving anything, private CV data and AI calls all require a logged-in session; the server decides who you are from the cookie, not from the browser.

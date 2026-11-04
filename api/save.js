@@ -7,8 +7,9 @@ const MENT_STATUS = ['requested', 'accepted', 'declined', 'done'];
 // POST /api/save { col, id, data } — upserts one document, with ownership checks per collection.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
-  const user = userOf(req);
-  if (!user) return send(res, 401, { error: 'missing_user' });
+  let user;
+  try { user = await userOf(req); } catch (e) { console.error(e); return send(res, 500, { error: 'database_error' }); }
+  if (!user) return send(res, 401, { error: 'login_required' });
   const body = await readBody(req);
   const { col, id, data } = body || {};
   if (typeof id !== 'string' || !/^[A-Za-z0-9_.:-]{1,120}$/.test(id) || !data || typeof data !== 'object' || Array.isArray(data)) return send(res, 400, { error: 'bad_request' });
