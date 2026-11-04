@@ -83,3 +83,9 @@ Applied → Shortlisted → Assessment (proctored mock test) → Interview → H
 
 ## Nepali
 `ne.js` holds the Nepali translation of the whole interface (dictionary plus patterns for sentences that contain names or job titles). When Nepali is chosen, every screen, message and label is translated after it renders; user content (CVs, job descriptions, names, districts) stays as written. Excel formulas and English example sentences in the English quiz are kept in English on purpose.
+
+## AI Hiring Manager (employers)
+- **Teach it:** add past applicants' CVs or work (paste or upload) marked Great hire / Okay / Not a fit, or import past Kaam applicants in one click (hired = Great hire, not selected = Not a fit). Emails and phone numbers are removed.
+- **Criteria:** the AI learns what separated great hires from the rest and writes 4–6 weighted criteria, which the employer can edit. Without an AI key, a basic word-matching version is used.
+- **Scoring:** each applicant gets a fit score per criterion with evidence and three interview questions, shown on the candidate page.
+- Stored privately for the employer (`private_docs`: `brain-<jobId>`, `aiscores`). Prompts tell the AI never to use names, gender, age, caste, religion, district or family details.

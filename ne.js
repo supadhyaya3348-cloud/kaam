@@ -325,6 +325,29 @@ window.KAAM_NE = (() => {
     'You finished using a shared computer. Before leaving you should:': 'साझा कम्प्युटर चलाइसक्नुभयो। जानुअघि तपाईंले:', 'Leave your email open': 'इमेल खुलै छाड्ने', 'Log out of every account': 'हरेक खाताबाट लग आउट गर्ने',
     'Save your password in the browser': 'ब्राउजरमा पासवर्ड सेभ गर्ने', 'Turn off the screen only': 'स्क्रिन मात्र बन्द गर्ने',
     'Basic Excel: SUM and filters Polite phone manner Simple English emails': 'आधारभूत Excel: SUM र फिल्टर\nफोनमा नम्र व्यवहार\nसरल अंग्रेजी इमेल',
+    // ---------- AI Hiring Manager ----------
+    'AI Manager': 'AI म्यानेजर', 'AI Hiring Manager': 'AI भर्ना म्यानेजर', "Teach it with past applicants' work and how they turned out. It learns what your great hires had in common, turns that into hiring criteria, and scores new applicants against them.": 'विगतका आवेदकको काम र उनीहरू कस्ता निस्किए भनेर सिकाउनुहोस्। यसले तपाईंका उत्कृष्ट कर्मचारीमा के समान थियो सिक्छ, त्यसलाई भर्नाका मापदण्डमा बदल्छ, र नयाँ आवेदकलाई तिनै मापदण्डमा अंक दिन्छ।',
+    'AI on': 'AI खुला छ', 'Basic mode: add an AI key to switch on full AI': 'आधारभूत मोड: पूरा AI खोल्न AI key थप्नुहोस्', 'Never uses names, gender, district or age.': 'नाम, लिङ्ग, जिल्ला वा उमेर कहिल्यै प्रयोग गर्दैन।',
+    'Job': 'जागिर', '1. TEACH IT WITH PAST APPLICANTS': '१. विगतका आवेदकबाट सिकाउनुहोस्', '2. HIRING CRITERIA': '२. भर्नाका मापदण्ड', '3. SCORE APPLICANTS': '३. आवेदकलाई अंक दिनुहोस्',
+    "Paste or upload a past applicant's CV or work, and say how they turned out. Hide names first if you can; Kaam also removes emails and phone numbers.": 'विगतका आवेदकको CV वा काम टाँस्नुहोस् वा अपलोड गर्नुहोस्, र उनी कस्ता निस्किए भन्नुहोस्। सकेसम्म पहिले नाम लुकाउनुहोस्; Kaam ले इमेल र फोन नम्बर पनि हटाउँछ।',
+    'No examples yet. Add 3 to 10 for good criteria.': 'अझै उदाहरण छैन। राम्रो मापदण्डका लागि ३ देखि १० वटा थप्नुहोस्।', 'Great hire': 'उत्कृष्ट कर्मचारी', 'Okay': 'ठीकै', 'Not a fit': 'मिलेन',
+    'Hired count as Great hire, not selected as Not a fit.': 'नियुक्त भएका "उत्कृष्ट", नछानिएका "मिलेन" मा गनिन्छन्।', 'Label (optional)': 'लेबल (ऐच्छिक)', 'e.g. Accountant hired in 2025': 'जस्तै: २०२५ मा नियुक्त लेखापाल',
+    'How did they turn out?': 'उनी कस्ता निस्किए?', 'Their CV or work': 'उनको CV वा काम', 'Paste a CV, a work sample, or a summary of what they did': 'CV, कामको नमुना, वा उनले के गरे भन्ने सारांश टाँस्नुहोस्',
+    'Upload PDF, Word or .txt': 'PDF, Word वा .txt अपलोड गर्नुहोस्', 'Why? (optional)': 'किन? (ऐच्छिक)', 'e.g. Accurate, learned our software in a week': 'जस्तै: सटीक, हप्ताभित्रै हाम्रो सफ्टवेयर सिके',
+    'Add example': 'उदाहरण थप्नुहोस्', 'Paste or upload their CV or work (at least a few lines).': 'उनको CV वा काम टाँस्नुहोस् वा अपलोड गर्नुहोस् (कम्तीमा केही लाइन)।',
+    'Example added. The more you add, the better the criteria.': 'उदाहरण थपियो। जति धेरै थप्नुहुन्छ, मापदण्ड उति राम्रो हुन्छ।', 'Past applicants imported.': 'विगतका आवेदक ल्याइए।',
+    'Made by AI': 'AI ले बनाएको', 'Basic': 'आधारभूत', 'AI': 'AI', 'Save criteria': 'मापदण्ड सेभ गर्नुहोस्', '+ Add criterion': '+ मापदण्ड थप्नुहोस्', 'New criterion': 'नयाँ मापदण्ड', 'Criteria saved.': 'मापदण्ड सेभ भयो।',
+    'Add at least 2 examples, including one Great hire, then create criteria.': 'कम्तीमा एउटा "उत्कृष्ट कर्मचारी" सहित २ उदाहरण थपेर मापदण्ड बनाउनुहोस्।', 'Add at least 2 past applicants, including one Great hire.': 'कम्तीमा एउटा "उत्कृष्ट कर्मचारी" सहित २ जना विगतका आवेदक थप्नुहोस्।',
+    'Create criteria from examples': 'उदाहरणबाट मापदण्ड बनाउनुहोस्', 'Learn again from examples': 'उदाहरणबाट फेरि सिक्नुहोस्', 'Learning from your examples…': 'तपाईंका उदाहरणबाट सिक्दैछ…',
+    'Hiring criteria ready. Check and edit them, then score applicants.': 'भर्नाका मापदण्ड तयार। जाँचेर सम्पादन गर्नुहोस्, अनि आवेदकलाई अंक दिनुहोस्।', 'Create criteria first.': 'पहिले मापदण्ड बनाउनुहोस्।',
+    'Score all applicants': 'सबै आवेदकलाई अंक दिनुहोस्', 'Scoring…': 'अंक दिँदैछ…', 'No current applicants for this job yet.': 'यो जागिरमा अहिले कुनै आवेदक छैनन्।', 'Review': 'हेर्नुहोस्',
+    'Post a job first, then teach your AI Manager for it.': 'पहिले जागिर पोस्ट गर्नुहोस्, अनि त्यसका लागि AI म्यानेजरलाई सिकाउनुहोस्।',
+    'AI Manager fit': 'AI म्यानेजर मिलान', 'Teach your AI Manager with past applicants for this job, and it will score candidates against your own criteria.': 'यो जागिरका विगतका आवेदकबाट AI म्यानेजरलाई सिकाउनुहोस्, अनि यसले उम्मेदवारलाई तपाईंकै मापदण्डमा अंक दिन्छ।',
+    'Teach AI Manager': 'AI म्यानेजरलाई सिकाउनुहोस्', 'Not scored yet.': 'अझै अंक दिइएको छैन।', 'Ask in the interview': 'अन्तर्वार्तामा सोध्नुहोस्', 'Score again': 'फेरि अंक दिनुहोस्',
+    'Score with my criteria': 'मेरो मापदण्डमा अंक दिनुहोस्', 'Scored against your criteria.': 'तपाईंको मापदण्डमा अंक दिइयो।', 'Teach your AI Manager and create criteria for this job first.': 'पहिले AI म्यानेजरलाई सिकाएर यो जागिरका मापदण्ड बनाउनुहोस्।',
+    'Found in CV or work samples.': 'CV वा कामका नमुनामा भेटियो।', 'Partly shown.': 'आंशिक रूपमा देखिएको।', 'Not shown in CV or work samples.': 'CV वा कामका नमुनामा देखिएन।',
+    'Shown clearly in their CV or work.': 'उनको CV वा काममा स्पष्ट देखिन्छ।', 'Your great hires talked about this; weaker applicants did not.': 'तपाईंका उत्कृष्ट कर्मचारीले यसबारे लेखेका थिए; कमजोर आवेदकले लेखेनन्।',
+    'Verified score of 60 or more on Kaam.': 'Kaam मा ६० वा बढी प्रमाणित अंक।', 'Criterion name': 'मापदण्डको नाम', 'Weight': 'महत्त्व', 'What strong evidence looks like': 'बलियो प्रमाण कस्तो देखिन्छ', 'Remove criterion': 'मापदण्ड हटाउनुहोस्',
     'Candidate': 'उम्मेदवार', 'Climber': 'आरोही'
   };
 
@@ -344,6 +367,13 @@ window.KAAM_NE = (() => {
   }
   const t2 = x => tr(x);
   const P = [
+    [/^Import (\d+) past Kaam applicants?$/, n => `विगतका ${n} Kaam आवेदक ल्याउनुहोस्`],
+    [/^Scored (\d+) applicants?\.$/, n => `${n} आवेदकलाई अंक दिइयो।`],
+    [/^Fit (\d+)$/, n => `मिलान ${n}`],
+    [/^Mentions "(.+)"$/, w => `"${w}" उल्लेख`],
+    [/^Kaam applicant (\w+)$/, c => `Kaam आवेदक ${c}`],
+    [/^Tell me about a time you showed: (.+)\.$/, x => `तपाईंले "${t2(x)}" देखाएको एउटा अनुभव सुनाउनुहोस्।`],
+    [/^Built from (\d+) great and (\d+) other examples? by matching words\. Add an AI key for deeper criteria\.$/, (a, b) => `${a} उत्कृष्ट र ${b} अन्य उदाहरणबाट शब्द मिलाएर बनाइएको। अझ गहिरो मापदण्डका लागि AI key थप्नुहोस्।`],
     [/^([◆◇]) (.+)$/, (b, x) => `${b} ${t2(x)}`],
     [/^(\d+)\. (.+)$/, (n, x) => { const o = t2(x); return o === x ? `${n}. ${x}` : `${n}. ${o}`; }],
     [/^(.+) (\d+)\/(\d+)$/, (k, a, b) => `${t2(k)} ${a}/${b}`],
