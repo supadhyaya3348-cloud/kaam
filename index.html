@@ -989,7 +989,7 @@ function vSim() {
     <div class="card stack">${mgr}<div class="bubble">${esc(d.intro)}</div></div></div>
       <div class="stack" style="gap:6px"><b>What you will do</b><ol class="reqs">${tasks.map(t => `<li>${esc(t.title)}</li>`).join('')}</ol></div>
       <div class="tiny mute">About ${d.minutes} minutes · each task is graded once on the CareerCamp server · you see a model answer after each task · ${M.pass}+ overall earns a certificate</div>
-      <div><button class="btn" type="button" data-act="simStart" style="--accent:var(--${d.color || 'ridge'})">Start the simulation</button></div></div></section>`;
+      <div class="row" style="gap:8px"><button class="btn" type="button" data-act="simStart" style="--accent:var(--${d.color || 'ridge'})">Start the simulation</button>${canSkipSim() ? `<button class="btn ghost" type="button" data-act="skipSimIntro" data-id="${esc(M.id)}">Skip for this demo</button>` : ''}</div></div></section>`;
   if (M.step === 'done') {
     const pr = M.progress; const p = me() || {};
     return `<section class="stack" style="gap:20px;max-width:900px">${head}
@@ -1525,6 +1525,12 @@ document.addEventListener('click', async e => {
     const res = await runAnalysis({ jobId: j.id, title: j.title }); S.busy = false;
     if (await savePriv('analysis', { ...res, roadShown: true })) { S.priv.analysis = { ...res, roadShown: true }; toast('Gap analysis ready. Tick off your roadmap courses as you finish them.'); }
     render(); return;
+  }
+  if (act === 'skipSimIntro' && p) {
+    const id = el.dataset.id; if (!id || S.busy) return;
+    try { const r = await api('/api/sim', { action: 'skip', id }); S.profiles[S.uid] = { ...me(), sims: r.sims }; S.sim = null; toast('Work simulation skipped for the demo.'); go('applications'); }
+    catch (e) { toast(e.message === 'skip_closed' ? 'Skipping was only open for demo day. Please do the work simulation.' : 'Could not skip. Try again.'); }
+    return;
   }
   if (act === 'skipSim' && p) {
     const id = el.dataset.id; if (!id || S.busy) return;
