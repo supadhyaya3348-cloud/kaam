@@ -916,6 +916,11 @@ function practiceQs(j) {
 // ---------- Work sims (virtual job experiences) ----------
 const simMeta = id => (S.simList || []).find(x => x.id === id) || (Object.values(S.jobs).find(j => j.sim === id && j.simInfo) || {}).simInfo || null;
 const mySims = () => (me() && me().sims) || {};
+// Demo day only (5 Nov 2026, Nepal time): a presenter may skip a work sim. The server enforces the same cut-off.
+const SKIP_UNTIL = Date.parse('2026-11-05T23:59:59+05:45');
+const canSkipSim = () => Date.now() <= SKIP_UNTIL;
+const skipBtn = id => canSkipSim() ? `<button class="btn ghost sm" type="button" data-act="skipSim" data-id="${esc(id)}">Skip work sim (demo)</button>` : '';
+const simScoreText = r => r && r.skipped ? 'Skipped (demo)' : r ? r.score + '/100' : '';
 function simBlocked(a) { const j = S.jobs[a.jobId] || {}; return !!(j.sim && !mySims()[j.sim]); }
 function readyStep(a) {
   const j = S.jobs[a.jobId] || {};
@@ -925,7 +930,7 @@ function readyStep(a) {
   const item = (ok, title, sub, btn) => `<li class="${ok ? 'done' : ''}"><span class="stack" style="gap:2px"><b>${ok ? '✓ ' : ''}${title}</b><span class="tiny mute">${sub}</span></span>${ok ? '' : btn}</li>`;
   return `<div class="card simcard stack" style="--accent:var(--gold);background:var(--panel2);padding:14px 16px;gap:10px"><b>Get ready for the shortlist</b>
     <ol class="readylist">
-      ${item(r.simDone, 'Do the work simulation', r.sim ? `Score ${r.sim.score}/100` : esc(m ? m.title + ' · about ' + m.minutes + ' minutes' : 'A short virtual day in this job'), `<button class="btn sm" type="button" data-act="openSim" data-id="${esc(j.sim || '')}" style="--accent:var(--gold)">Start work sim</button>`)}
+      ${item(r.simDone, 'Do the work simulation', r.sim ? (r.sim.skipped ? 'Skipped for the demo' : `Score ${r.sim.score}/100`) : esc(m ? m.title + ' · about ' + m.minutes + ' minutes' : 'A short virtual day in this job'), `<span class="row" style="gap:6px"><button class="btn sm" type="button" data-act="openSim" data-id="${esc(j.sim || '')}" style="--accent:var(--gold)">Start work sim</button>${skipBtn(j.sim || '')}</span>`)}
       ${item(r.gap, 'Get your gap analysis for this job', r.gap ? 'Your CV is checked against this job and your roadmap is ready.' : 'CareerCamp checks your CV against this job and plans what to learn.', `<button class="btn sm ghost" type="button" data-act="gapFor" data-id="${esc(a.jobId)}" ${S.busy ? 'disabled' : ''}>${S.busy ? '<span class="spin"></span> Checking…' : 'Analyse my CV for this job'}</button>`)}
       ${item(r.gap && r.left === 0, 'Tick off your roadmap courses', !r.gap ? 'Comes after the gap analysis.' : r.courses ? `${r.courses - r.left} of ${r.courses} courses done` : 'No courses needed: your CV already covers this job.', r.gap ? `<a class="btn sm ghost" href="#dashboard">Open my roadmap</a>` : '')}
     </ol>
@@ -934,9 +939,9 @@ function readyStep(a) {
 function simStep(a) {
   const j = S.jobs[a.jobId] || {}; if (!j.sim || !['shortlisted', 'assessment', 'interview', 'selected'].includes(a.status)) return '';
   const r = mySims()[j.sim]; const m = simMeta(j.sim);
-  if (r) return `<div class="banner b-ok small">Work simulation done: <b>${r.score}/100</b>${r.passed ? '' : ' (below 60)'}. The employer can see your result.</div>`;
+  if (r) return r.skipped ? '<div class="banner b-info small">Work simulation skipped for the demo.</div>' : `<div class="banner b-ok small">Work simulation done: <b>${r.score}/100</b>${r.passed ? '' : ' (below 60)'}. The employer can see your result.</div>`;
   if (a.status !== 'shortlisted') return '';
-  return `<div class="card simcard row between" style="--accent:var(--gold);background:var(--panel2);padding:14px 16px"><div class="stack" style="gap:2px"><b>Step 1 · Do the work simulation</b><span class="small mute">${esc(m ? m.title + ' · about ' + m.minutes + ' minutes' : 'A short virtual day in this job')}. Then take the proctored test.</span></div><button class="btn sm" type="button" data-act="openSim" data-id="${esc(j.sim)}" style="--accent:var(--gold)">Start simulation</button></div>`;
+  return `<div class="card simcard row between" style="--accent:var(--gold);background:var(--panel2);padding:14px 16px"><div class="stack" style="gap:2px"><b>Step 1 · Do the work simulation</b><span class="small mute">${esc(m ? m.title + ' · about ' + m.minutes + ' minutes' : 'A short virtual day in this job')}. Then take the proctored test.</span></div><button class="btn sm" type="button" data-act="openSim" data-id="${esc(j.sim)}" style="--accent:var(--gold)">Start simulation</button>${skipBtn(j.sim)}</div>`;
 }
 function simSummary(a, j) {
   const x = S.profiles[a.uid] || {}; const all = x.sims || {};
@@ -944,8 +949,8 @@ function simSummary(a, j) {
   if (!j.sim && !other.length) return '';
   const r = j.sim ? all[j.sim] : null;
   return `<div class="stack" style="gap:6px"><b>Work simulation</b>
-    ${j.sim ? (r ? `<div class="row" style="gap:16px"><div><div class="t-l kv" style="color:${r.passed ? 'var(--base)' : 'var(--warn)'}">${r.score}</div><div class="tiny mute">${esc(r.title)}</div></div><div class="small">${Object.values(r.tasks || {}).map((v, i) => `Task ${i + 1}: <b>${v}</b>`).join(' · ')}<div class="tiny mute">Graded on the CareerCamp server · ${new Date(r.at).toLocaleDateString()}</div></div></div>` : '<div class="small mute">Not done yet. Shortlisted candidates do it before the proctored test.</div>') : ''}
-    ${other.length ? `<div class="row" style="gap:6px">${other.map(([, o]) => `<span class="tag base">${esc(o.title)} · ${o.score}</span>`).join('')}</div>` : ''}</div>`;
+    ${j.sim ? (r && r.skipped ? `<div class="small"><span class="tag warm">Skipped (demo)</span> <span class="mute">${esc(r.title)} was skipped for the demo, so there is no score.</span></div>` : r ? `<div class="row" style="gap:16px"><div><div class="t-l kv" style="color:${r.passed ? 'var(--base)' : 'var(--warn)'}">${r.score}</div><div class="tiny mute">${esc(r.title)}</div></div><div class="small">${Object.values(r.tasks || {}).map((v, i) => `Task ${i + 1}: <b>${v}</b>`).join(' · ')}<div class="tiny mute">Graded on the CareerCamp server · ${new Date(r.at).toLocaleDateString()}</div></div></div>` : '<div class="small mute">Not done yet. Shortlisted candidates do it before the proctored test.</div>') : ''}
+    ${other.length ? `<div class="row" style="gap:6px">${other.map(([, o]) => `<span class="tag base">${esc(o.title)} · ${o.skipped ? 'skipped' : o.score}</span>`).join('')}</div>` : ''}</div>`;
 }
 async function openSim(id) {
   if (!S.api || S.offline) return toast('Work sims need the CareerCamp server. Check your connection.');
@@ -964,7 +969,7 @@ function vSims() {
       <div class="row between"><span class="tag">${esc(x.company)}</span><span class="tiny mute">${x.tasks} tasks · about ${x.minutes} min</span></div>
       <h2 class="t-m">${esc(x.title)}</h2><div class="small mute">Role: ${esc(x.role)}</div>
       <div class="row" style="gap:6px">${x.skills.map(k => `<span class="tag base">${esc(SKILLS[k] ? SKILLS[k].name : k)}</span>`).join('')}</div>
-      <div class="row">${r ? `<span class="tag ${r.passed ? 'base' : 'warm'}">Completed · ${r.score}/100</span><button class="btn ghost sm" type="button" data-act="openSim" data-id="${esc(x.id)}">View certificate</button>` : `<button class="btn sm" type="button" data-act="openSim" data-id="${esc(x.id)}" style="--accent:var(--${x.color || 'ridge'})">Start simulation</button>`}</div></div>`; }).join('') : '<div class="empty">Work sims are loading. Check your connection if this stays empty.</div>'}</div></section>`;
+      <div class="row">${r ? `<span class="tag ${r.passed ? 'base' : 'warm'}">${r.skipped ? 'Skipped (demo)' : 'Completed · ' + r.score + '/100'}</span><button class="btn ghost sm" type="button" data-act="openSim" data-id="${esc(x.id)}">View certificate</button>` : `<button class="btn sm" type="button" data-act="openSim" data-id="${esc(x.id)}" style="--accent:var(--${x.color || 'ridge'})">Start simulation</button>`}</div></div>`; }).join('') : '<div class="empty">Work sims are loading. Check your connection if this stays empty.</div>'}</div></section>`;
 }
 function simTable(t, mode, ans) {
   const pick = mode === 'pick', cls = mode === 'classify';
@@ -1149,7 +1154,7 @@ function applicantsBlock(j) {
       ${j.blind ? '<div class="banner b-warn small">Blind hiring is on. Names and contact details stay hidden until a candidate passes the assessment and reaches the interview.</div>' : ''}
       <div class="list">${apps.length ? apps.map(([a, x, m], i) => { const show = !j.blind || a.status === 'interview' || a.status === 'selected'; const sc = scoresOf(x); return `<div class="stack" style="gap:6px">
         <div class="row between"><b>${i + 1}. ${show ? esc(x.name) + ' · ' + esc(x.district || '') : 'Candidate ' + code(a.uid)}</b><span class="row">${a.status === 'applied' ? (a.ready ? `<span class="tag base">Ready · ${readyScore(a, j)}</span>` : '<span class="tag">Getting ready</span>') : ''}<b class="kv">Match ${m}</b><span class="tag ${a.status === 'selected' || a.status === 'interview' ? 'base' : a.status === 'rejected' ? 'warm' : ''}">${esc(stageName(a.status))}</span></span></div>${pipeHTML(a)}
-        <div class="tiny mute">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `${esc(SKILLS[k].name)} ${sc[k] != null ? sc[k] : '–'}`).join(' · ')} · ${(x.portfolio || []).length} work samples · ${a.cv ? 'CV shared' : 'no CV'}${j.sim && x.sims && x.sims[j.sim] ? ' · work sim ' + x.sims[j.sim].score : ''}${a.ready ? (a.ready.courses ? ' · roadmap courses ' + a.ready.courses + '/' + a.ready.courses : ' · no courses needed') : ''}${aiScores()[a.id] ? ' · fit ' + aiScores()[a.id].overall : ''}${a.test ? ' · assessment ' + a.test.score : ''}</div>
+        <div class="tiny mute">${SK.filter(k => (+j.skills[k] || 0) > 0).map(k => `${esc(SKILLS[k].name)} ${sc[k] != null ? sc[k] : '–'}`).join(' · ')} · ${(x.portfolio || []).length} work samples · ${a.cv ? 'CV shared' : 'no CV'}${j.sim && x.sims && x.sims[j.sim] ? ' · work sim ' + (x.sims[j.sim].skipped ? 'skipped (demo)' : x.sims[j.sim].score) : ''}${a.ready ? (a.ready.courses ? ' · roadmap courses ' + a.ready.courses + '/' + a.ready.courses : ' · no courses needed') : ''}${aiScores()[a.id] ? ' · fit ' + aiScores()[a.id].overall : ''}${a.test ? ' · assessment ' + a.test.score : ''}</div>
         <div class="row"><button class="btn sm" type="button" data-act="revApp" data-id="${esc(a.id)}" style="--accent:var(--gold)">Review skills, CV and test</button></div></div>`; }).join('') : '<div class="empty">No applicants yet. They appear here ranked by skill match.</div>'}</div></div>
     <div class="card stack"><div class="t-m" style="color:var(--gold)">FAIR HIRING CHECK</div>
       <div class="scroll"><table class="fair"><thead><tr><th>Share of candidates</th>${Object.keys(groups).map(g => `<th>${g}</th>`).join('')}</tr></thead><tbody>
@@ -1520,6 +1525,12 @@ document.addEventListener('click', async e => {
     const res = await runAnalysis({ jobId: j.id, title: j.title }); S.busy = false;
     if (await savePriv('analysis', { ...res, roadShown: true })) { S.priv.analysis = { ...res, roadShown: true }; toast('Gap analysis ready. Tick off your roadmap courses as you finish them.'); }
     render(); return;
+  }
+  if (act === 'skipSim' && p) {
+    const id = el.dataset.id; if (!id || S.busy) return;
+    try { const r = await api('/api/sim', { action: 'skip', id }); S.profiles[S.uid] = { ...me(), sims: r.sims }; toast('Work simulation skipped for the demo.'); render(); }
+    catch (e) { toast(e.message === 'skip_closed' ? 'Skipping was only open for demo day. Please do the work simulation.' : 'Could not skip. Try again.'); }
+    return;
   }
   if (act === 'demoLogin') {
     if (S.busy) return; S.busy = true; render();

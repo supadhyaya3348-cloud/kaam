@@ -5,6 +5,9 @@ import { generateSim, SIM_STORE, ruleSim, simInfoOf } from './_simgen.js';
 // AI generation can take a while.
 export const config = { maxDuration: 60 };
 
+// "Skip work sim" is open only for demo day (5 Nov 2026, Nepal time), then switches itself off.
+export const SKIP_UNTIL = Date.parse('2026-11-05T23:59:59+05:45');
+
 // Built-in sims live in _sims.js; sims generated for a job post live in private_docs under SIM_STORE.
 async function getSim(id) {
   if (SIMS[id]) return SIMS[id];
@@ -60,6 +63,19 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
     if (!user) return send(res, 401, { error: 'login_required' });
     const body = await readBody(req) || {};
+    if (body.action === 'skip') {
+      // Demo day only: lets a presenter skip a work sim. Recorded as "skipped" (no score), never as a pass.
+      if (Date.now() > SKIP_UNTIL) return send(res, 403, { error: 'skip_closed' });
+      const sk = await getSim(String(body.id || '')); if (!sk) return send(res, 404, { error: 'not_found' });
+      const [p] = await sql`SELECT data FROM profiles WHERE id = ${user}`;
+      if (!p) return send(res, 400, { error: 'no_profile' });
+      const data = p.data || {};
+      if (!(data.sims && data.sims[sk.id])) {
+        data.sims = { ...(data.sims || {}), [sk.id]: { title: sk.title, company: sk.company, score: null, passed: false, skipped: true, at: Date.now(), tasks: {} } };
+        await sql`UPDATE profiles SET data = ${JSON.stringify(data)}::jsonb, updated_at = now() WHERE id = ${user}`;
+      }
+      return send(res, 200, { ok: true, sims: data.sims });
+    }
     if (body.action === 'generate') {
       const [job] = await sql`SELECT id, owner, data FROM jobs WHERE id = ${String(body.jobId || '')}`;
       if (!job) return send(res, 404, { error: 'not_found' });
